@@ -3,7 +3,10 @@ import { createServer } from 'net';
 /**
  * Check if a port is available for binding.
  *
- * @param port The port number to check
+ * **Note:** This function checks IPv4 port availability only. IPv6 support
+ * depends on the Node.js net module's default behavior for your system.
+ *
+ * @param port The port number to check (1-65535)
  * @returns Promise that resolves to true if the port is available, false otherwise
  *
  * @example
@@ -20,12 +23,8 @@ export function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const server = createServer();
 
-    server.once('error', (err: any) => {
-      if (err.code === 'EADDRINUSE') {
-        resolve(false);
-      } else {
-        resolve(false);
-      }
+    server.once('error', () => {
+      resolve(false);
     });
 
     server.once('listening', () => {
@@ -41,9 +40,12 @@ export function isPortAvailable(port: number): Promise<boolean> {
  * Check if both HTTP and gRPC ports are available.
  * Throws an error with actionable suggestions if any port is unavailable.
  *
- * @param httpPort The HTTP port to check
- * @param grpcPort The gRPC port to check
- * @throws Error if either port is unavailable
+ * **Note:** This function checks IPv4 port availability only. IPv6 support
+ * depends on the Node.js net module's default behavior for your system.
+ *
+ * @param httpPort The HTTP port to check (1-65535)
+ * @param grpcPort The gRPC port to check (1-65535)
+ * @throws Error if either port is unavailable or invalid
  *
  * @example
  * ```typescript
