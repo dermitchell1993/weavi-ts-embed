@@ -50,6 +50,7 @@ describe('WeaviateProcess', () => {
       additionalEnvVars: {
         ENABLE_MODULES: 'text2vec-transformers',
       },
+      verbose: true, // Enable verbose for testing
     };
 
     it('should check ports before spawning process', async () => {
@@ -84,10 +85,13 @@ describe('WeaviateProcess', () => {
       const spawnCall = mockSpawn.mock.calls[0];
       const spawnOptions = spawnCall[2];
 
+      // Path should be resolved to absolute
+      const expectedPath = require('path').join(process.cwd(), './data/weaviate');
+
       expect(spawnOptions?.env).toMatchObject({
         WEAVIATE_PORT: '8080',
         WEAVIATE_GRPC_PORT: '50051',
-        PERSISTENCE_DATA_PATH: './data/weaviate',
+        PERSISTENCE_DATA_PATH: expectedPath,
         ENABLE_MODULES: 'text2vec-transformers',
       });
     });
@@ -104,7 +108,9 @@ describe('WeaviateProcess', () => {
       const spawnCall = mockSpawn.mock.calls[0];
       const spawnOptions = spawnCall[2];
 
-      expect(spawnOptions?.env?.PERSISTENCE_DATA_PATH).toBe('./data/weaviate');
+      // Should resolve to absolute path from cwd
+      const expectedPath = require('path').join(process.cwd(), './data/weaviate');
+      expect(spawnOptions?.env?.PERSISTENCE_DATA_PATH).toBe(expectedPath);
     });
 
     it('should merge additional environment variables', async () => {
@@ -113,12 +119,15 @@ describe('WeaviateProcess', () => {
       const spawnCall = mockSpawn.mock.calls[0];
       const spawnOptions = spawnCall[2];
 
+      // Path should be resolved to absolute
+      const expectedPath = require('path').join(process.cwd(), './data/weaviate');
+
       // Should include both process.env and additional vars
       expect(spawnOptions?.env).toMatchObject({
         ...process.env,
         WEAVIATE_PORT: '8080',
         WEAVIATE_GRPC_PORT: '50051',
-        PERSISTENCE_DATA_PATH: './data/weaviate',
+        PERSISTENCE_DATA_PATH: expectedPath,
         ENABLE_MODULES: 'text2vec-transformers',
       });
     });
@@ -190,6 +199,45 @@ describe('WeaviateProcess', () => {
 
       expect(weaviateProcess.isRunning()).toBe(false);
     });
+
+    it('should not log startup messages when verbose is false', async () => {
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const configWithoutVerbose = {
+        binaryPath: '/path/to/weaviate',
+        port: 8080,
+        grpcPort: 50051,
+        verbose: false,
+      };
+
+      await weaviateProcess.start(configWithoutVerbose);
+
+      // Should not log any startup messages
+      const startupLogs = consoleSpy.mock.calls.filter((call) =>
+        call[0]?.includes('[WeaviateProcess] Starting')
+      );
+      expect(startupLogs.length).toBe(0);
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should not capture stdout when verbose is false', async () => {
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const configWithoutVerbose = {
+        binaryPath: '/path/to/weaviate',
+        port: 8080,
+        grpcPort: 50051,
+        verbose: false,
+      };
+
+      await weaviateProcess.start(configWithoutVerbose);
+      mockProcess.stdout.emit('data', Buffer.from('Test stdout output'));
+
+      // Should not log stdout
+      const stdoutLogs = consoleSpy.mock.calls.filter((call) => call[0]?.includes('[Weaviate]'));
+      expect(stdoutLogs.length).toBe(0);
+
+      consoleSpy.mockRestore();
+    });
   });
 
   describe('isRunning', () => {
@@ -241,6 +289,7 @@ describe('WeaviateProcess', () => {
         binaryPath: '/path/to/weaviate',
         port: 8080,
         grpcPort: 50051,
+        verbose: true, // Enable verbose for testing
       });
     });
 
@@ -265,19 +314,23 @@ describe('WeaviateProcess', () => {
     it('should force kill after timeout', async () => {
       const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
 
-      // Override kill method to not emit exit immediately
+      // Override kill method to not emit exit on SIGTERM, only on SIGKILL
       mockProcess.kill = jest.fn().mockImplementation((signal?: string) => {
         if (signal === 'SIGKILL') {
           mockProcess.killed = true;
-          mockProcess.emit('exit', 0, signal);
+          // Emit exit asynchronously to allow cleanup to set the flag
+          setImmediate(() => mockProcess.emit('exit', 0, signal));
         }
+        // Don't emit exit for SIGTERM to trigger timeout
         return true;
       });
 
-      await weaviateProcess.stop(100); // Short timeout
+      const stopPromise = weaviateProcess.stop(100); // Short timeout
 
-      // Wait for timeout
+      // Wait for timeout to trigger
       await new Promise((resolve) => setTimeout(resolve, 150));
+
+      await stopPromise;
 
       expect(consoleSpy).toHaveBeenCalledWith('[WeaviateProcess] Graceful shutdown timed out, forcing kill');
 
@@ -301,14 +354,17 @@ describe('WeaviateProcess', () => {
       consoleSpy.mockRestore();
     });
 
-    it('should handle kill errors', async () => {
-      // Override the kill method to throw an error
+    it('should handle kill errors on SIGTERM', async () => {
+      // Override the kill method to throw an error when called with SIGTERM
       const originalKill = mockProcess.kill.bind(mockProcess);
-      mockProcess.kill = jest.fn().mockImplementation(() => {
-        throw new Error('Kill failed');
+      mockProcess.kill = jest.fn().mockImplementation((signal?: string) => {
+        if (signal === 'SIGTERM') {
+          throw new Error('Kill failed');
+        }
+        return originalKill(signal);
       });
 
-      // Stop should reject with an error
+      // Stop should reject with an error when SIGTERM fails
       await expect(weaviateProcess.stop()).rejects.toThrow('Failed to stop Weaviate process: Kill failed');
 
       // Restore for cleanup

@@ -1,4 +1,5 @@
 import { spawn, ChildProcess } from 'child_process';
+import { join } from 'path';
 import { checkPorts } from './port-utils';
 
 export interface WeaviateProcessConfig {
@@ -20,8 +21,13 @@ export interface WeaviateProcessConfig {
   grpcPort: number;
 
   /**
-   * Path where Weaviate should persist data
-   * @default './data/weaviate'
+   * Path where Weaviate should persist data.
+   *
+   * **Important:** If a relative path is provided, it will be resolved relative
+   * to the current working directory at the time the process starts. For predictable
+   * behavior, consider using an absolute path.
+   *
+   * @default './data/weaviate' (relative to process.cwd())
    */
   persistenceDataPath?: string;
 
@@ -29,6 +35,13 @@ export interface WeaviateProcessConfig {
    * Additional environment variables to pass to the Weaviate process
    */
   additionalEnvVars?: Record<string, string>;
+
+  /**
+   * Enable verbose logging for debugging.
+   * When false, only errors and critical messages are logged.
+   * @default false
+   */
+  verbose?: boolean;
 }
 
 /**
@@ -98,19 +111,26 @@ export class WeaviateProcess {
 
     this.config = config;
 
+    // Resolve data path to absolute if relative
+    const dataPath = config.persistenceDataPath || './data/weaviate';
+    const resolvedDataPath = join(process.cwd(), dataPath);
+
     // Prepare environment variables
     const env = {
       ...process.env,
       WEAVIATE_PORT: config.port.toString(),
       WEAVIATE_GRPC_PORT: config.grpcPort.toString(),
-      PERSISTENCE_DATA_PATH: config.persistenceDataPath || './data/weaviate',
+      PERSISTENCE_DATA_PATH: resolvedDataPath,
       ...config.additionalEnvVars,
     };
 
-    console.log(`[WeaviateProcess] Starting Weaviate binary at ${config.binaryPath}`);
-    console.log(`[WeaviateProcess] HTTP Port: ${config.port}`);
-    console.log(`[WeaviateProcess] gRPC Port: ${config.grpcPort}`);
-    console.log(`[WeaviateProcess] Data Path: ${env.PERSISTENCE_DATA_PATH}`);
+    // Log startup info if verbose mode is enabled
+    if (config.verbose) {
+      console.log(`[WeaviateProcess] Starting Weaviate binary at ${config.binaryPath}`);
+      console.log(`[WeaviateProcess] HTTP Port: ${config.port}`);
+      console.log(`[WeaviateProcess] gRPC Port: ${config.grpcPort}`);
+      console.log(`[WeaviateProcess] Data Path: ${resolvedDataPath}`);
+    }
 
     // Spawn the Weaviate process
     this.process = spawn(config.binaryPath, [], {
@@ -119,15 +139,17 @@ export class WeaviateProcess {
       detached: false, // Keep process as part of the process group
     });
 
-    // Capture stdout for debugging
-    this.process.stdout?.on('data', (data) => {
-      const output = data.toString().trim();
-      if (output) {
-        console.log(`[Weaviate] ${output}`);
-      }
-    });
+    // Capture stdout for debugging (only in verbose mode)
+    if (config.verbose) {
+      this.process.stdout?.on('data', (data) => {
+        const output = data.toString().trim();
+        if (output) {
+          console.log(`[Weaviate] ${output}`);
+        }
+      });
+    }
 
-    // Capture stderr for debugging
+    // Always capture stderr for errors
     this.process.stderr?.on('data', (data) => {
       const output = data.toString().trim();
       if (output) {
@@ -144,15 +166,19 @@ export class WeaviateProcess {
 
     // Handle process exit
     this.process.on('exit', (code, signal) => {
-      if (code !== null) {
-        console.log(`[WeaviateProcess] Process exited with code ${code}`);
-      } else if (signal !== null) {
-        console.log(`[WeaviateProcess] Process terminated by signal ${signal}`);
+      if (config.verbose) {
+        if (code !== null) {
+          console.log(`[WeaviateProcess] Process exited with code ${code}`);
+        } else if (signal !== null) {
+          console.log(`[WeaviateProcess] Process terminated by signal ${signal}`);
+        }
       }
       this.process = null;
     });
 
-    console.log(`[WeaviateProcess] Process started with PID ${this.process.pid}`);
+    if (config.verbose) {
+      console.log(`[WeaviateProcess] Process started with PID ${this.process.pid}`);
+    }
   }
 
   /**
@@ -170,7 +196,10 @@ export class WeaviateProcess {
       return Promise.resolve();
     }
 
-    console.log(`[WeaviateProcess] Stopping process with PID ${this.process.pid}`);
+    const verbose = this.config?.verbose ?? false;
+    if (verbose) {
+      console.log(`[WeaviateProcess] Stopping process with PID ${this.process.pid}`);
+    }
 
     return new Promise<void>((resolve, reject) => {
       if (!this.process) {
@@ -179,33 +208,49 @@ export class WeaviateProcess {
       }
 
       let timeoutId: NodeJS.Timeout | null = null;
-      let resolved = false;
+      let cleanedUp = false;
 
-      const cleanup = () => {
+      const cleanup = (fromTimeout = false) => {
+        // Prevent race condition by ensuring cleanup only happens once
+        if (cleanedUp) {
+          return;
+        }
+        cleanedUp = true;
+
         if (timeoutId) {
           clearTimeout(timeoutId);
+          timeoutId = null;
         }
-        resolved = true;
+
+        // Only set process to null once during cleanup
+        if (this.process) {
+          this.process = null;
+        }
+
+        if (fromTimeout) {
+          console.warn('[WeaviateProcess] Graceful shutdown timed out, forcing kill');
+        } else if (verbose) {
+          console.log('[WeaviateProcess] Process stopped successfully');
+        }
+
+        resolve();
       };
 
       // Set up exit handler
       this.process.once('exit', () => {
-        if (!resolved) {
-          cleanup();
-          console.log('[WeaviateProcess] Process stopped successfully');
-          this.process = null;
-          resolve();
-        }
+        cleanup(false);
       });
 
       // Set up timeout for forceful kill
       timeoutId = setTimeout(() => {
-        if (!resolved && this.process) {
-          cleanup();
-          console.warn('[WeaviateProcess] Graceful shutdown timed out, forcing kill');
-          this.process.kill('SIGKILL');
-          this.process = null;
-          resolve();
+        if (!cleanedUp && this.process) {
+          // Send SIGKILL before cleanup to ensure process is killed
+          try {
+            this.process.kill('SIGKILL');
+          } catch {
+            // Ignore errors if process already exited
+          }
+          cleanup(true);
         }
       }, timeout);
 
@@ -213,7 +258,12 @@ export class WeaviateProcess {
       try {
         this.process.kill('SIGTERM');
       } catch (err) {
-        cleanup();
+        // Don't call cleanup - we want to reject instead
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        cleanedUp = true; // Prevent race condition
+        this.process = null;
         const error = err instanceof Error ? err : new Error(String(err));
         reject(new Error(`Failed to stop Weaviate process: ${error.message}`));
       }
