@@ -38,9 +38,7 @@
   "homepage": "https://github.com/weaviate/typescript-embedded#readme",
   "dependencies": {
     "adm-zip": "^0.5.10",
-    "tar": "^6.1.13"
-  },
-  "peerDependencies": {
+    "tar": "^6.1.13",
     "weaviate-client": "^3.11.0"
   },
   "devDependencies": {
@@ -66,8 +64,7 @@
     "prettier": "^2.8.4",
     "ts-jest": "^29.0.5",
     "tsup": "^6.7.0",
-    "typescript": "^4.9.5",
-    "weaviate-client": "^3.11.0"
+    "typescript": "^4.9.5"
   },
   "lint-staged": {
     "*.{ts,js}": [

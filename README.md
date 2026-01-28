@@ -10,7 +10,7 @@ npm install weaviate-ts-embedded weaviate-client
 
 **Requirements:**
 - Node.js >= 18.0.0
-- weaviate-client v3.11.0 or higher (installed as peer dependency)
+- weaviate-client v3.11.0 or higher (installed as dependency)
 
 ## Quick Start
 
@@ -105,56 +105,6 @@ main().catch(console.error);
 - [Weaviate TypeScript Client v3 Docs](https://weaviate.io/developers/weaviate/client-libraries/typescript)
 
 ---
-
-## 🔄 Migration from V2 API
-
-The old class-based API is deprecated and will be removed in v3.0.0:
-
-<details>
-<summary><strong>Old V2 API (Deprecated - Click to expand)</strong></summary>
-
-### With default options
-
-Defaults:
-- Host: `127.0.0.1`
-- Port: `6666`
-- Weaviate version: `latest`
-
-```ts
-import weaviate, { EmbeddedClient, EmbeddedOptions } from 'weaviate-ts-embedded';
-
-const client: EmbeddedClient = weaviate.client(new EmbeddedOptions());
-await client.embedded.start();
-// use the client to interact with embedded Weaviate
-client.embedded.stop();
-```
-
-### With custom options
-
-```ts
-import weaviate, { EmbeddedClient, EmbeddedOptions } from 'weaviate-ts-embedded';
-
-const client: EmbeddedClient = weaviate.client(
-  new EmbeddedOptions({
-    port: 7878,
-    version: '1.18.1',
-    env: {
-      QUERY_DEFAULTS_LIMIT: 50,
-      DEFAULT_VECTORIZER_MODULE: 'text2vec-openai',
-    },
-  }),
-  // weaviate-ts-client ConnectionParams
-  {
-    scheme: 'http',
-    host: '127.0.0.1:7878',
-  }
-);
-await client.embedded.start();
-// use the client to interact with embedded Weaviate
-client.embedded.stop();
-```
-
-</details>
 
 ## Support
 

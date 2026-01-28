@@ -1,45 +1,35 @@
-import weaviate, { EmbeddedOptions } from 'weaviate-ts-embedded';
+import { connectToEmbedded } from 'weaviate-ts-embedded';
 
-if (process.platform !== 'linux') {
-  throw new Error('EmbeddedDB only supports Linux at the moment. Try me in a Docker container!');
+if (process.platform !== 'linux' && process.platform !== 'darwin') {
+  throw new Error('EmbeddedDB only supports Linux and macOS. Try me in a Docker container!');
 }
 
-const client = weaviate.client(
-  new EmbeddedOptions({
-    port: 9898,
-  }),
-  {
-    scheme: 'http',
-    host: 'localhost:9898',
-  }
-);
-
-console.log('Weaviate binary:', client.embedded?.options.binaryPath);
-console.log('Data path:', client.embedded?.options.persistenceDataPath);
-
-await client.embedded.start();
+// Connect to embedded Weaviate instance using v3 API
+const client = await connectToEmbedded({
+  port: 9898,
+  version: 'latest',
+});
 
 console.info('\nEmbedded DB started\n');
 
-// Create object with autoschema
-const result = await client.data
-  .creator()
-  .withClassName('Wine')
-  .withProperties({
-    name: 'Pinot noir',
-    description: 'Smooth taste',
-  })
-  .do();
-console.log(result);
+// Create a collection (v3 API)
+const myCollection = client.collections.get('Wine');
 
-// Dump all objects
-const objects = await client.data.getter().do();
-console.log(objects);
+// Insert data using v3 API
+const result = await myCollection.data.insert({
+  name: 'Pinot noir',
+  description: 'Smooth taste',
+});
+console.log('Inserted object:', result);
 
-// Dump metadata
-const metadata = await client.misc.metaGetter().do();
-console.log(metadata);
+// Query all objects in the collection
+const queryResult = await myCollection.query.fetchObjects();
+console.log('All objects:', queryResult.objects);
 
-console.info('\nStopping...');
-client.embedded.stop();
+// Get server metadata
+const meta = await client.getMeta();
+console.log('Server metadata:', meta);
+
+console.info('\nClosing connection...');
+await client.close();
 console.info('Exiting...');
