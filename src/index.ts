@@ -7,6 +7,11 @@ export type { WeaviateClient } from 'weaviate-client';
 
 // Export binary manager utilities
 export * from './binary-manager';
+
+// Export platform detection utilities
+export * from './platform';
+
+// Export port utilities
 export * from './port-utils';
 
 // Export process management utilities
