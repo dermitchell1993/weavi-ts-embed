@@ -28,3 +28,4 @@ const app = {
 
 export default app;
 export * from './embedded';
+export * from './binary-manager';
