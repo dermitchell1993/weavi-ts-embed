@@ -2,6 +2,16 @@
 
 An embedded Weaviate database with TypeScript client interface, available for Linux and Mac
 
+## Installation
+
+```bash
+npm install weaviate-ts-embedded weaviate-client
+```
+
+**Requirements:**
+- Node.js >= 18.0.0
+- weaviate-client v3.11.0 or higher (installed as peer dependency)
+
 ## Documentation
 
 - [Documentation](https://weaviate.io/developers/weaviate/installation/embedded).

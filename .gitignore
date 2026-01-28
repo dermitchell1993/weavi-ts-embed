@@ -5,6 +5,8 @@ node_modules/
 config.yaml
 lib.js
 weaviate-data/
+data/
+bin/
 .vscode/
 .idea/
 *.tgz
