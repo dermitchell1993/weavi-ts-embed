@@ -7,3 +7,4 @@ export type { WeaviateClient } from 'weaviate-client';
 
 // Export binary manager utilities
 export * from './binary-manager';
+export * from './port-utils';
