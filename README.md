@@ -12,11 +12,106 @@ npm install weaviate-ts-embedded weaviate-client
 - Node.js >= 18.0.0
 - weaviate-client v3.11.0 or higher (installed as peer dependency)
 
-## Documentation
+## Quick Start
 
-- [Documentation](https://weaviate.io/developers/weaviate/installation/embedded).
+### Basic Usage (Recommended - V3 API)
 
-## Examples
+```typescript
+import { connectToEmbedded } from 'weaviate-ts-embedded';
+
+// Connect to embedded instance with defaults
+const client = await connectToEmbedded();
+
+// Use the client like any weaviate-client v3 instance
+const collections = await client.collections.listAll();
+
+// Clean up
+await client.close();
+```
+
+**Default Configuration:**
+- **HTTP Port**: `8080`
+- **gRPC Port**: `50051` 
+- **Version**: `latest`
+- **Host**: `localhost`
+
+### Custom Configuration
+
+```typescript
+import { connectToEmbedded } from 'weaviate-ts-embedded';
+
+const client = await connectToEmbedded({
+  port: 8080,
+  grpcPort: 50051,
+  version: '1.27.0',
+  persistenceDataPath: './my-weaviate-data',
+  additionalEnvVars: {
+    QUERY_DEFAULTS_LIMIT: '50',
+    DEFAULT_VECTORIZER_MODULE: 'text2vec-openai',
+  },
+  headers: {
+    'X-OpenAI-Api-Key': process.env.OPENAI_API_KEY,
+  },
+});
+
+// Use collections API
+const myCollection = client.collections.get('Article');
+const result = await myCollection.query.fetchObjects();
+
+await client.close();
+```
+
+### Full Example with TypeScript Generics
+
+```typescript
+import { connectToEmbedded, type WeaviateClient } from 'weaviate-ts-embedded';
+
+interface Article {
+  title: string;
+  content: string;
+  author: string;
+}
+
+async function main() {
+  const client: WeaviateClient = await connectToEmbedded({
+    version: '1.27.0',
+  });
+
+  // Type-safe collection access
+  const articles = client.collections.get<Article>('Article');
+  
+  // Insert data
+  await articles.data.insert({
+    title: 'Embedded Weaviate',
+    content: 'Easy local vector search!',
+    author: 'Developer',
+  });
+
+  // Query with full type safety
+  const results = await articles.query.fetchObjects();
+  console.log(results.objects[0].properties.title); // TypeScript knows this is a string!
+
+  await client.close();
+}
+
+main().catch(console.error);
+```
+
+---
+
+## 📚 Documentation
+
+- [Weaviate Embedded Installation Guide](https://weaviate.io/developers/weaviate/installation/embedded)
+- [Weaviate TypeScript Client v3 Docs](https://weaviate.io/developers/weaviate/client-libraries/typescript)
+
+---
+
+## 🔄 Migration from V2 API
+
+The old class-based API is deprecated and will be removed in v3.0.0:
+
+<details>
+<summary><strong>Old V2 API (Deprecated - Click to expand)</strong></summary>
 
 ### With default options
 
@@ -59,21 +154,7 @@ await client.embedded.start();
 client.embedded.stop();
 ```
 
-### With direct binary url
-
-```ts
-import weaviate, { EmbeddedClient, EmbeddedOptions } from 'weaviate-ts-embedded';
-
-const binaryUrl = 'https://some-link-to-weaviate-binary';
-const client: EmbeddedClient = weaviate.client(
-  new EmbeddedOptions({
-    binaryUrl: binaryUrl,
-  })
-);
-await client.embedded.start();
-// use the client to interact with embedded Weaviate
-client.embedded.stop();
-```
+</details>
 
 ## Support
 
