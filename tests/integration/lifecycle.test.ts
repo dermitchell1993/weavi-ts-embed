@@ -192,6 +192,9 @@ describe('WeaviateProcess Lifecycle Integration Tests', () => {
           port: TEST_PORT + 1,
           grpcPort: TEST_GRPC_PORT + 1,
           persistenceDataPath: testDataDir,
+          additionalEnvVars: {
+            AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true',
+          },
           verbose: false,
         })
       ).rejects.toThrow(/already running/i);
@@ -244,6 +247,10 @@ describe('WeaviateProcess Lifecycle Integration Tests', () => {
         grpcPort: TEST_GRPC_PORT,
         persistenceDataPath: testDataDir,
         verbose: false,
+        additionalEnvVars: {
+          AUTHENTICATION_APIKEY_ENABLED: 'true',
+          AUTHENTICATION_APIKEY_ALLOWED_KEYS: 'test-key',
+        },
       });
 
       await weaviateProcess.stop();
@@ -262,6 +269,10 @@ describe('WeaviateProcess Lifecycle Integration Tests', () => {
         grpcPort: TEST_GRPC_PORT,
         persistenceDataPath: testDataDir,
         verbose: false,
+        additionalEnvVars: {
+          AUTHENTICATION_APIKEY_ENABLED: 'true',
+          AUTHENTICATION_APIKEY_ALLOWED_KEYS: 'test-key',
+        },
       });
 
       const pid = weaviateProcess.getPid();

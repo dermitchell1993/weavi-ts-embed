@@ -91,10 +91,10 @@ export class BinaryManager {
   }
 
   /**
-   * Gets the checksums URL for a given version
+   * Gets the checksums URL for a given version and binary filename
    */
-  private getChecksumsUrl(version: string): string {
-    return `https://github.com/weaviate/weaviate/releases/download/v${version}/weaviate-v${version}-checksums.txt`;
+  private getChecksumsUrl(version: string, binaryFilename: string): string {
+    return `https://github.com/weaviate/weaviate/releases/download/v${version}/${binaryFilename}.sha256`;
   }
 
   /**
@@ -176,15 +176,9 @@ export class BinaryManager {
    * Verifies the SHA256 checksum of the downloaded binary
    */
   private async verifyChecksum(downloadPath: string, version: string): Promise<void> {
-    const checksumsUrl = this.getChecksumsUrl(version);
-    const checksums = await this.downloadChecksums(checksumsUrl);
-
     const filename = basename(downloadPath);
-    const expectedChecksum = this.extractChecksum(checksums, filename);
-
-    if (!expectedChecksum) {
-      throw new Error(`No checksum found for ${filename} in checksums file`);
-    }
+    const checksumsUrl = this.getChecksumsUrl(version, filename);
+    const expectedChecksum = await this.downloadChecksum(checksumsUrl);
 
     const actualChecksum = await this.calculateSHA256(downloadPath);
 
@@ -202,9 +196,9 @@ export class BinaryManager {
   }
 
   /**
-   * Downloads the checksums file
+   * Downloads the checksum for a specific binary
    */
-  private downloadChecksums(url: string): Promise<string> {
+  private downloadChecksum(url: string): Promise<string> {
     return new Promise((resolve, reject) => {
       get(url, (resp) => {
         if (resp.statusCode === 200) {
@@ -213,7 +207,7 @@ export class BinaryManager {
             body += chunk;
           });
           resp.on('end', () => {
-            resolve(body);
+            resolve(body.trim());
           });
         } else if (resp.statusCode === 302 && resp.headers.location) {
           // Handle redirect
@@ -223,32 +217,18 @@ export class BinaryManager {
               body += chunk;
             });
             resp.on('end', () => {
-              resolve(body);
+              resolve(body.trim());
             });
           }).on('error', (err) => {
-            reject(new Error(`Failed to download checksums (redirect): ${err.message}`));
+            reject(new Error(`Failed to download checksum (redirect): ${err.message}`));
           });
         } else {
-          reject(new Error(`Failed to download checksums: HTTP ${resp.statusCode}`));
+          reject(new Error(`Failed to download checksum: HTTP ${resp.statusCode}`));
         }
       }).on('error', (err) => {
-        reject(new Error(`Failed to download checksums: ${err.message}`));
+        reject(new Error(`Failed to download checksum: ${err.message}`));
       });
     });
-  }
-
-  /**
-   * Extracts the checksum for a specific file from the checksums text
-   */
-  private extractChecksum(checksumsText: string, filename: string): string | null {
-    const lines = checksumsText.split('\n');
-    for (const line of lines) {
-      const parts = line.trim().split(/\s+/);
-      if (parts.length >= 2 && parts[1] === filename) {
-        return parts[0];
-      }
-    }
-    return null;
   }
 
   /**
