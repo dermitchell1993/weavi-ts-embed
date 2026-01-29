@@ -64,22 +64,26 @@ jobs:
 
       - name: Download Weaviate binaries
         run: |
-          node -e "
-          const { BinaryManager } = require('./dist/binary-manager.js');
-          const path = require('path');
+          cat > download-binary.mjs << 'EOF'
+          import { BinaryManager } from './dist/index.js';
+          import { join } from 'path';
+          import { homedir } from 'os';
           
-          const cacheDir = path.join(process.env.HOME, '.cache', 'weaviate-embedded');
+          const cacheDir = join(homedir(), '.cache', 'weaviate-embedded');
           const manager = new BinaryManager({ cacheDir });
           
           console.log('Downloading Weaviate binaries...');
-          manager.ensureBinary().then(binaryPath => {
+          try {
+            const binaryPath = await manager.ensureBinary();
             console.log('Binary downloaded to:', binaryPath);
             console.log('Cache directory:', cacheDir);
-          }).catch(err => {
+            process.exit(0);
+          } catch (err) {
             console.error('Failed to download binary:', err);
             process.exit(1);
-          });
-          "
+          }
+          EOF
+          node download-binary.mjs
 
       - name: Upload Weaviate binaries as artifact
         uses: actions/upload-artifact@v4
