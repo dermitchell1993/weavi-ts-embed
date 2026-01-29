@@ -88,7 +88,7 @@ export async function connectToEmbedded(options: EmbeddedOptions = {}): Promise<
 
   // Connect to the embedded instance using the official v3 client with retry logic
   // Node 20/22 require more time for gRPC initialization than Node 18
-  let client;
+  let client: WeaviateClient | undefined;
   const maxRetries = 5;
   const initialDelay = 2000; // 2 seconds
 
@@ -135,6 +135,11 @@ export async function connectToEmbedded(options: EmbeddedOptions = {}): Promise<
           'This is a known issue on Node 20/22 with slower gRPC initialization.'
       );
     }
+  }
+
+  // At this point, client is guaranteed to be defined (we throw if it's not)
+  if (!client) {
+    throw new Error('Unexpected: client is undefined after retry loop');
   }
 
   console.log('[Embedded Weaviate] Connected successfully!');
