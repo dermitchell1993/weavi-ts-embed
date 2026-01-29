@@ -256,19 +256,19 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
       expect(instance2.isRunning()).toBe(true);
     });
 
-    it('should fail when trying to start instance with already-used HTTP port', async () => {
+    it('should fail when trying to start instance with already-used gRPC port', async () => {
       const instance1 = new WeaviateProcess();
       const instance2 = new WeaviateProcess();
       instances.push(instance1, instance2);
 
-      const port = BASE_HTTP_PORT;
-      // Use same port for gRPC and HTTP since Weaviate might use same port
-      const grpcPort = BASE_HTTP_PORT;
+      const port1 = BASE_HTTP_PORT;
+      const grpcPort = BASE_GRPC_PORT;
+      const port2 = BASE_HTTP_PORT + 1; // Different HTTP port
 
       // Start first instance
       await instance1.start({
         binaryPath,
-        port,
+        port: port1,
         grpcPort,
         persistenceDataPath: createTestDataDir(),
         additionalEnvVars: {
@@ -281,25 +281,25 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
       expect(instance1.isRunning()).toBe(true);
 
       // Wait for the first instance to fully bind to ports
-      console.log(`Waiting 10 seconds for first instance to bind to HTTP port ${port}`);
+      console.log(`Waiting 10 seconds for first instance to bind to gRPC port ${grpcPort}`);
       await new Promise((resolve) => setTimeout(resolve, 10000));
 
-      // Check if HTTP port is now in use
-      console.log(`Checking if HTTP port ${port} is now in use`);
+      // Check if gRPC port is now in use
+      console.log(`Checking if gRPC port ${grpcPort} is now in use`);
       try {
-        await checkPorts(port, grpcPort);
-        console.log(`ERROR: checkPorts did not detect that HTTP port ${port} is in use!`);
+        await checkPorts(port1, grpcPort);
+        console.log(`ERROR: checkPorts did not detect that gRPC port ${grpcPort} is in use!`);
       } catch (error) {
-        console.log(`GOOD: checkPorts correctly detected HTTP port is in use: ${error}`);
+        console.log(`GOOD: checkPorts correctly detected gRPC port is in use: ${error}`);
       }
 
-      // Try to start second instance with same HTTP port - should fail
-      console.log(`Attempting to start second instance with same HTTP port - this should fail`);
+      // Try to start second instance with same gRPC port - should fail
+      console.log(`Attempting to start second instance with same gRPC port - this should fail`);
       await expect(
         instance2.start({
           binaryPath,
-          port, // Same HTTP port - conflict!
-          grpcPort, // Same gRPC port (hardcoded in Weaviate)
+          port: port2, // Different HTTP port
+          grpcPort, // Same gRPC port - conflict!
           persistenceDataPath: createTestDataDir(),
           additionalEnvVars: {
             CLUSTER_GOSSIP_BIND_PORT: (BASE_CLUSTER_PORT + 1).toString(),
