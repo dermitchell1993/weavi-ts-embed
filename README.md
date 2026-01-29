@@ -9,7 +9,7 @@ npm install weaviate-ts-embedded weaviate-client
 ```
 
 **Requirements:**
-- Node.js >= 18.0.0
+- Node.js >= 18.0.0 (Node 20 or 22 recommended for best performance - [see performance guide](./docs/testing/ci-testing.md#nodejs-version-support))
 - weaviate-client v3.11.0 or higher (installed as dependency)
 
 ## Quick Start
@@ -266,24 +266,6 @@ See the [Examples README](./examples/README.md) for a complete overview.
 
 - [Stackoverflow for questions](https://stackoverflow.com/questions/tagged/weaviate).
 - [Github for issues](https://github.com/weaviate/typescript-embedded/issues).
-
-## Performance & Compatibility
-
-### Node.js Version Support
-
-This package supports **Node.js 18, 20, and 22** with the following performance characteristics:
-
-- **Node.js 20 & 22**: Optimal performance (recommended for production)
-  - Integration tests: ~30-40 seconds
-  - Faster V8 JIT compilation and garbage collection
-  - Better child process spawning performance
-
-- **Node.js 18**: Slower but fully supported
-  - Integration tests: ~2 minutes (3-4x slower than Node 20/22)
-  - Due to older V8 engine optimizations
-  - All functionality works correctly, just takes longer to execute
-
-**Recommendation**: Use Node.js 20 or 22 for best performance in production environments. Node.js 18 is maintained for compatibility but will have slower startup times and test execution.
 
 ## Contributing
 
