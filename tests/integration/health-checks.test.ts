@@ -18,6 +18,17 @@ import { waitForReady, checkLiveness, WaitForReadyOptions } from '../../src/heal
 import { createServer, Server } from 'http';
 import { AddressInfo } from 'net';
 
+// Constants for test port ranges to avoid conflicts with other services
+const TEST_PORT_RANGE_START = 56000;
+const TEST_PORT_RANGE_SIZE = 1000;
+
+/**
+ * Generate a random test port in the safe range
+ */
+function getRandomTestPort(): number {
+  return TEST_PORT_RANGE_START + Math.floor(Math.random() * TEST_PORT_RANGE_SIZE);
+}
+
 /**
  * Helper to create a mock HTTP server that simulates Weaviate health endpoints
  */
@@ -130,15 +141,21 @@ class MockWeaviateServer {
 
 describe('Health Check Integration Tests', () => {
   let mockServer: MockWeaviateServer;
+  let consoleLogSpy: jest.SpyInstance;
 
   // Set test timeout to 60 seconds for integration tests
   jest.setTimeout(60000);
 
   beforeEach(() => {
     mockServer = new MockWeaviateServer();
+    // Suppress console.log output in tests for cleaner test output
+    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
   });
 
   afterEach(async () => {
+    // Restore console.log
+    consoleLogSpy.mockRestore();
+
     // Only stop the server if it was actually started
     if (mockServer && mockServer.getPort() > 0) {
       try {
@@ -225,8 +242,7 @@ describe('Health Check Integration Tests', () => {
   describe('Connection refused handling', () => {
     it('should handle connection refused errors gracefully and retry', async () => {
       // Don't start the server initially - simulates connection refused
-      // Use a high port number to avoid conflicts
-      const port = 57000 + Math.floor(Math.random() * 1000);
+      const port = getRandomTestPort();
 
       const options: WaitForReadyOptions = {
         timeout: 300,
@@ -237,9 +253,8 @@ describe('Health Check Integration Tests', () => {
       await expect(waitForReady(port, options)).rejects.toThrow(/failed to start/);
     }, 10000);
 
-    it('should successfully connect after initial connection refused errors', async () => {
-      // Use a high port number to avoid conflicts
-      const port = 56000 + Math.floor(Math.random() * 1000);
+    it('should retry continuously on connection refused until timeout expires', async () => {
+      const port = getRandomTestPort();
 
       // Start polling with connection refused - this will timeout
       const pollPromise = waitForReady(port, {
@@ -247,7 +262,7 @@ describe('Health Check Integration Tests', () => {
         retryInterval: 50,
       });
 
-      // This test demonstrates that the health check handles connection refused
+      // This test validates that the health check handles connection refused
       // gracefully and continues retrying until timeout
       await expect(pollPromise).rejects.toThrow(/failed to start/);
     }, 10000);
@@ -389,8 +404,7 @@ describe('Health Check Integration Tests', () => {
 
     it('should return false on connection errors', async () => {
       // Use a port with no server running - this will cause ECONNREFUSED
-      // We need to use a high port number to avoid conflicts
-      const port = 58000 + Math.floor(Math.random() * 1000);
+      const port = getRandomTestPort();
 
       const isLive = await checkLiveness(port);
 
