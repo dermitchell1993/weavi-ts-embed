@@ -267,6 +267,24 @@ See the [Examples README](./examples/README.md) for a complete overview.
 - [Stackoverflow for questions](https://stackoverflow.com/questions/tagged/weaviate).
 - [Github for issues](https://github.com/weaviate/typescript-embedded/issues).
 
+## Performance & Compatibility
+
+### Node.js Version Support
+
+This package supports **Node.js 18, 20, and 22** with the following performance characteristics:
+
+- **Node.js 20 & 22**: Optimal performance (recommended for production)
+  - Integration tests: ~30-40 seconds
+  - Faster V8 JIT compilation and garbage collection
+  - Better child process spawning performance
+
+- **Node.js 18**: Slower but fully supported
+  - Integration tests: ~2 minutes (3-4x slower than Node 20/22)
+  - Due to older V8 engine optimizations
+  - All functionality works correctly, just takes longer to execute
+
+**Recommendation**: Use Node.js 20 or 22 for best performance in production environments. Node.js 18 is maintained for compatibility but will have slower startup times and test execution.
+
 ## Contributing
 
 - [How to Contribute](https://github.com/weaviate/typescript-embedded/blob/main/CONTRIBUTE.md).
