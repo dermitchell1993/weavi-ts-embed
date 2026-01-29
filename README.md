@@ -242,7 +242,19 @@ For a complete list of environment variables, see the [Weaviate Configuration Do
 
 ---
 
-## 📚 Documentation
+## 📚 Examples & Documentation
+
+### 🎯 Working Examples
+
+Check out our example projects demonstrating common use cases:
+
+- **[Basic Usage](./examples/basic/)** - Simple connection, insert, and query (5 min)
+- **[Advanced Configuration](./examples/advanced/)** - Custom ports, environment variables, OpenAI vectorizer (15 min)
+- **[Migration Guide](./examples/migration/)** - Side-by-side v1/v2 vs v3 comparison (10 min)
+
+See the [Examples README](./examples/README.md) for a complete overview.
+
+### 📖 Official Documentation
 
 - [Weaviate Embedded Installation Guide](https://weaviate.io/developers/weaviate/installation/embedded)
 - [Weaviate TypeScript Client v3 Docs](https://weaviate.io/developers/weaviate/client-libraries/typescript)

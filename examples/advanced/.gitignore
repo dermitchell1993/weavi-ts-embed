@@ -1,0 +1,6 @@
+node_modules/
+.weaviate/
+my-weaviate-data/
+*.log
+.env
+

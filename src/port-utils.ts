@@ -19,21 +19,34 @@ import { createServer } from 'net';
  * }
  * ```
  */
-export function isPortAvailable(port: number): Promise<boolean> {
-  return new Promise((resolve) => {
+export async function isPortAvailable(port: number): Promise<boolean> {
+  // Check IPv4
+  const ipv4Available = await new Promise<boolean>((resolve) => {
     const server = createServer();
-
-    server.once('error', () => {
-      resolve(false);
-    });
-
+    server.once('error', () => resolve(false));
     server.once('listening', () => {
       server.close();
       resolve(true);
     });
-
-    server.listen(port);
+    server.listen(port, '0.0.0.0');
   });
+
+  if (!ipv4Available) {
+    return false;
+  }
+
+  // Check IPv6
+  const ipv6Available = await new Promise<boolean>((resolve) => {
+    const server = createServer();
+    server.once('error', () => resolve(false));
+    server.once('listening', () => {
+      server.close();
+      resolve(true);
+    });
+    server.listen(port, '::');
+  });
+
+  return ipv6Available;
 }
 
 /**
