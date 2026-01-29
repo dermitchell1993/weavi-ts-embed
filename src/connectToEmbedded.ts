@@ -152,5 +152,9 @@ export async function connectToEmbedded(options: EmbeddedOptions = {}): Promise<
     console.log('✅ Embedded Weaviate shutdown complete');
   };
 
+  // Attach process instance to client for debugging/testing
+  // This allows checking process state and enables better testing
+  (client as any).__weaviateProcess = weaviateProcess;
+
   return client;
 }
