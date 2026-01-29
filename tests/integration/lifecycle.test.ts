@@ -102,11 +102,13 @@ describe('WeaviateProcess Lifecycle Integration Tests', () => {
       }
     }
 
-    // Clean up test data directory
-    try {
-      rmSync(testDataDir, { recursive: true, force: true });
-    } catch (error) {
-      console.error('Error cleaning up test data directory:', error);
+    // Clean up test data directory (only if it was created)
+    if (testDataDir) {
+      try {
+        rmSync(testDataDir, { recursive: true, force: true });
+      } catch (error) {
+        console.error('Error cleaning up test data directory:', error);
+      }
     }
   });
 
