@@ -33,9 +33,10 @@ describe('Weaviate V3 Operations Integration Tests', () => {
   let testDataDir: string;
 
   // Use a unique port range to avoid conflicts with other tests
-  // PRI-744a uses 19080, PRI-744b uses 18080-18098, so we use 20080+ here
-  const TEST_PORT = parseInt(process.env.TEST_V3_PORT || '20080', 10);
-  const TEST_GRPC_PORT = parseInt(process.env.TEST_V3_GRPC_PORT || '51052', 10);
+  // Port allocation: PRI-744a uses 19080, PRI-744b uses 18080-18098, PRI-744e uses 20080
+  // We use 21080-21090 range to avoid conflicts with PR #18
+  const TEST_PORT = parseInt(process.env.TEST_V3_PORT || '21080', 10);
+  const TEST_GRPC_PORT = parseInt(process.env.TEST_V3_GRPC_PORT || '51053', 10);
 
   // Increase timeout for integration tests as they involve real process operations
   jest.setTimeout(60000);
@@ -483,6 +484,75 @@ describe('Weaviate V3 Operations Integration Tests', () => {
       // Verify objects were inserted
       const fetchResult = await collection.query.fetchObjects({ limit: 20 });
       expect(fetchResult.objects.length).toBe(10);
+    });
+
+    it('should update multiple objects in batch', async () => {
+      const collection = client.collections.get(testCollectionName);
+
+      // First, insert some objects
+      const insertData = Array.from({ length: 5 }, (_, i) => ({
+        title: `Original ${i}`,
+        index: i,
+      }));
+      const insertResults = await collection.data.insertMany(insertData);
+      const uuids = Object.values(insertResults.uuids);
+
+      // Update objects in batch using individual update calls
+      // Note: Weaviate v3 doesn't have a native batch update, so we update individually
+      const updatePromises = uuids.map((uuid, i) =>
+        collection.data.update({
+          id: uuid,
+          properties: {
+            title: `Updated ${i}`,
+            index: i + 100,
+          },
+        })
+      );
+
+      await Promise.all(updatePromises);
+
+      // Verify updates
+      const verifyPromises = uuids.map((uuid) => collection.query.fetchObjectById(uuid));
+      const results = await Promise.all(verifyPromises);
+
+      results.forEach((obj, i) => {
+        expect(obj).toBeDefined();
+        expect(obj?.properties.title).toBe(`Updated ${i}`);
+        expect(obj?.properties.index).toBe(i + 100);
+      });
+    });
+
+    it('should delete multiple objects in batch', async () => {
+      const collection = client.collections.get(testCollectionName);
+
+      // First, insert some objects to delete
+      const insertData = Array.from({ length: 5 }, (_, i) => ({
+        title: `ToDelete ${i}`,
+        index: i + 200,
+      }));
+      const insertResults = await collection.data.insertMany(insertData);
+      const uuids = Object.values(insertResults.uuids);
+
+      // Verify objects exist
+      const beforeDelete = await collection.query.fetchObjects({ limit: 100 });
+      const initialCount = beforeDelete.objects.length;
+      expect(initialCount).toBeGreaterThanOrEqual(5);
+
+      // Delete objects in batch
+      const deletePromises = uuids.map((uuid) => collection.data.deleteById(uuid));
+      await Promise.all(deletePromises);
+
+      // Verify objects are deleted
+      const afterDelete = await collection.query.fetchObjects({ limit: 100 });
+      expect(afterDelete.objects.length).toBe(initialCount - 5);
+
+      // Verify specific objects no longer exist
+      const verifyPromises = uuids.map((uuid) => collection.query.fetchObjectById(uuid));
+      const results = await Promise.all(verifyPromises);
+
+      results.forEach((obj) => {
+        expect(obj).toBeNull();
+      });
     });
   });
 
