@@ -280,8 +280,8 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
       expect(instance1.isRunning()).toBe(true);
 
       // Wait for the first instance to fully bind to ports
-      console.log(`Waiting 5 seconds for first instance to bind to HTTP port ${port}`);
-      await new Promise((resolve) => setTimeout(resolve, 5000));
+      console.log(`Waiting 10 seconds for first instance to bind to HTTP port ${port}`);
+      await new Promise((resolve) => setTimeout(resolve, 10000));
 
       // Check if HTTP port is now in use
       console.log(`Checking if HTTP port ${port} is now in use`);
