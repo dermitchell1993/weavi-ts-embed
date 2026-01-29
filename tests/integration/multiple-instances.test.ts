@@ -128,9 +128,6 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
       port: httpPort,
       grpcPort,
       persistenceDataPath: dataDir,
-      additionalEnvVars: {
-        CLUSTER_GOSSIP_BIND_PORT: clusterPort.toString(),
-      },
       verbose: false,
       additionalEnvVars: {
         // Disable clustering for isolated test instances
