@@ -132,6 +132,18 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
         CLUSTER_GOSSIP_BIND_PORT: clusterPort.toString(),
       },
       verbose: false,
+      additionalEnvVars: {
+        // Disable clustering for isolated test instances
+        RAFT_BOOTSTRAP_EXPECT: '1',
+        // Set unique cluster ports to avoid conflicts
+        RAFT_PORT: (8300 + instanceNumber).toString(),
+        RAFT_INTERNAL_RPC_PORT: (8301 + instanceNumber).toString(),
+        // Set unique memberlist ports
+        CLUSTER_GOSSIP_BIND_PORT: (7946 + instanceNumber).toString(),
+        CLUSTER_DATA_BIND_PORT: (7947 + instanceNumber).toString(),
+        // Disable memberlist to prevent clustering
+        DISABLE_MEMBERLIST: 'true',
+      },
     });
 
     return instance;
