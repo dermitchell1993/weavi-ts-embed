@@ -1,6 +1,6 @@
 /**
  * Basic Usage Example
- * 
+ *
  * This example demonstrates the simplest way to use Weaviate TypeScript Embedded Client.
  * Perfect for getting started quickly!
  */
@@ -34,7 +34,7 @@ async function main() {
     name: 'Merlot',
     description: 'A smooth red wine with plum and chocolate flavors',
     year: 2019,
-    price: 32.50,
+    price: 32.5,
   });
   console.log('✅ Inserted second wine\n');
 
@@ -43,7 +43,7 @@ async function main() {
   const queryResult = await wineCollection.query.fetchObjects({
     limit: 10,
   });
-  
+
   console.log(`Found ${queryResult.objects.length} wine(s):`);
   queryResult.objects.forEach((obj, index) => {
     console.log(`  ${index + 1}. ${obj.properties.name} (${obj.properties.year}) - $${obj.properties.price}`);
@@ -67,6 +67,6 @@ async function main() {
 // Run the example
 main().catch((error) => {
   console.error('❌ Error:', error);
+  // eslint-disable-next-line no-process-exit
   process.exit(1);
 });
-

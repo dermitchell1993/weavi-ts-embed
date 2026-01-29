@@ -1,9 +1,9 @@
 /**
  * V1/V2 Example (OLD API - For Reference Only)
- * 
+ *
  * This shows the OLD way of using Weaviate client.
  * DO NOT use this in new projects!
- * 
+ *
  * This file is for comparison purposes only.
  */
 
@@ -86,4 +86,3 @@ V1/V2 API Characteristics:
 
 console.log(v1Note);
 console.log('\n⚠️ This is the OLD way - see v3-example.ts for the NEW way!');
-

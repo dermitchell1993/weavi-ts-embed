@@ -1,6 +1,6 @@
 /**
  * V3 Example (NEW API - Use This!)
- * 
+ *
  * This shows the NEW way of using Weaviate TypeScript Embedded Client.
  * Much simpler, more intuitive, and fully type-safe!
  */
@@ -66,7 +66,7 @@ async function newWay() {
 
   const typedCollection = client.collections.get<Wine>('Wine');
   const typedResult = await typedCollection.query.fetchObjects({ limit: 1 });
-  
+
   if (typedResult.objects.length > 0) {
     // TypeScript knows these properties exist!
     const wine = typedResult.objects[0].properties;
@@ -80,13 +80,13 @@ async function newWay() {
   console.log('🧹 Closing...');
   await client.close();
   console.log('✅ Done!\n');
-  
+
   console.log('✨ V3 API is much cleaner and easier to use!');
 }
 
 // Run the example
 newWay().catch((error) => {
   console.error('❌ Error:', error);
+  // eslint-disable-next-line no-process-exit
   process.exit(1);
 });
-
