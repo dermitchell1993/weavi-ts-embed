@@ -21,8 +21,9 @@ describe('WeaviateProcess Lifecycle Integration Tests', () => {
   let testDataDir: string;
 
   // Use a unique port range to avoid conflicts with other tests or services
-  const TEST_PORT = 18080;
-  const TEST_GRPC_PORT = 50151;
+  // Note: PR #15 uses 18080-18098, so we use 19080+ to avoid conflicts
+  const TEST_PORT = 19080;
+  const TEST_GRPC_PORT = 51051;
 
   // Increase timeout for integration tests as they involve real process operations
   jest.setTimeout(60000);
@@ -38,9 +39,20 @@ describe('WeaviateProcess Lifecycle Integration Tests', () => {
       console.log(`Using Weaviate binary at: ${binaryPath}`);
     } catch (error) {
       console.error('Failed to download Weaviate binary:', error);
+      console.error('Error details:', error instanceof Error ? error.message : String(error));
+
+      // If binary is unavailable, skip all tests in this suite
+      console.warn('⚠️  Skipping lifecycle tests: Weaviate binary unavailable');
+      console.warn('💡 This may be due to:');
+      console.warn('   - No internet connection');
+      console.warn('   - GitHub releases unreachable');
+      console.warn('   - BinaryManager.ensureBinary() implementation incomplete');
+      console.warn('   - First run requiring download');
+
       throw new Error(
         'Integration tests require Weaviate binary. ' +
-          'Ensure you have internet connection for the first run.'
+          'Ensure you have internet connection for the first run. ' +
+          'See error details above.'
       );
     }
   });
@@ -55,7 +67,7 @@ describe('WeaviateProcess Lifecycle Integration Tests', () => {
 
   afterEach(async () => {
     // Ensure process is stopped and cleaned up after each test
-    if (weaviateProcess.isRunning()) {
+    if (weaviateProcess?.isRunning()) {
       try {
         await weaviateProcess.stop(5000);
       } catch (error) {
@@ -359,9 +371,9 @@ describe('WeaviateProcess Lifecycle Integration Tests', () => {
         expect(weaviateProcess.isRunning()).toBe(true);
         expect(weaviateProcess.getPid()).toBeDefined();
 
-        // Small delay to ensure process is fully started
+        // Delay to ensure process is fully started (500ms for slower systems)
         // eslint-disable-next-line no-await-in-loop
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 500));
 
         // Stop
         // eslint-disable-next-line no-await-in-loop

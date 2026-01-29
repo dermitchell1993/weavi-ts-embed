@@ -41,9 +41,11 @@ npm test -- tests/integration/lifecycle.test.ts
 ## Requirements
 
 1. **Weaviate Binary**: Integration tests will automatically download the Weaviate binary on first run (requires internet connection)
-2. **Available Ports**: Tests use ports 18080 (HTTP) and 50151 (gRPC) - ensure these are available
+2. **Available Ports**: Tests use ports 19080 (HTTP) and 51051 (gRPC) - ensure these are available
 3. **Node.js**: Version 18.0.0 or higher
 4. **Disk Space**: Approximately 100MB for Weaviate binary and test data
+
+**Note:** Port range 19080-19090 is used to avoid conflicts with PR #15 (port conflict tests) which uses 18080-18098.
 
 ## Test Timeout
 
@@ -64,7 +66,7 @@ Each test:
 ## Troubleshooting
 
 ### Port Already in Use
-If tests fail with port errors, ensure no other Weaviate instances or services are using ports 18080 or 50151.
+If tests fail with port errors, ensure no other Weaviate instances or services are using ports 19080 or 51051.
 
 ### Binary Download Fails
 If the binary download fails:
@@ -94,4 +96,3 @@ When adding new integration tests:
 4. Document test purpose and requirements
 5. Set appropriate timeouts for long-running operations
 6. Ensure tests can run independently and in any order
-
