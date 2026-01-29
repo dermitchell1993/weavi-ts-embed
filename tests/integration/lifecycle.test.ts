@@ -118,7 +118,7 @@ describe('WeaviateProcess Lifecycle Integration Tests', () => {
       await expect(checkPorts(TEST_PORT, TEST_GRPC_PORT)).resolves.not.toThrow();
 
       await weaviateProcess.start({
-        binaryPath: binaryPath,
+        binaryPath: binaryPath!,
         port: TEST_PORT,
         grpcPort: TEST_GRPC_PORT,
         persistenceDataPath: testDataDir,
@@ -147,7 +147,7 @@ describe('WeaviateProcess Lifecycle Integration Tests', () => {
 
       await expect(
         secondProcess.start({
-          binaryPath: binaryPath,
+          binaryPath: binaryPath!,
           port: TEST_PORT,
           grpcPort: TEST_GRPC_PORT,
           persistenceDataPath: join(testDataDir, 'second'),
