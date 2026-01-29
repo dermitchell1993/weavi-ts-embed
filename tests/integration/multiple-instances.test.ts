@@ -223,6 +223,7 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
       const grpcPort2 = BASE_GRPC_PORT + 1;
 
       // Verify ports are available
+      console.log(`Checking ports ${port1} and ${grpcPort1} before starting first instance`);
       await expect(checkPorts(port1, grpcPort1)).resolves.not.toThrow();
       await expect(checkPorts(port2, grpcPort2)).resolves.not.toThrow();
 
@@ -279,9 +280,20 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
       expect(instance1.isRunning()).toBe(true);
 
       // Wait for the first instance to fully bind to ports
+      console.log(`Waiting 5 seconds for first instance to bind to ports ${port} and ${grpcPort}`);
       await new Promise((resolve) => setTimeout(resolve, 5000));
 
+      // Check if ports are now in use
+      console.log(`Checking if ports ${port} and ${grpcPort} are now in use`);
+      try {
+        await checkPorts(port, grpcPort);
+        console.log(`ERROR: checkPorts did not detect that ports ${port} and ${grpcPort} are in use!`);
+      } catch (error) {
+        console.log(`GOOD: checkPorts correctly detected ports are in use: ${error}`);
+      }
+
       // Try to start second instance with same ports - should fail
+      console.log(`Attempting to start second instance with same ports - this should fail`);
       await expect(
         instance2.start({
           binaryPath,
@@ -290,6 +302,7 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
           persistenceDataPath: createTestDataDir(),
           additionalEnvVars: {
             CLUSTER_GOSSIP_BIND_PORT: (BASE_CLUSTER_PORT + 1).toString(),
+            CLUSTER_GOSSIP_ADVERTISE_PORT: (BASE_CLUSTER_PORT + 1).toString(),
           },
           verbose: false,
         })
