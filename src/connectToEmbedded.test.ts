@@ -2,13 +2,16 @@ import { connectToEmbedded } from './connectToEmbedded';
 import { WeaviateProcess } from './weaviate-process';
 import { BinaryManager } from './binary-manager';
 import { connectToLocal } from 'weaviate-client';
+import { waitForReady } from './health-check';
 
 // Mock dependencies
 jest.mock('./weaviate-process');
 jest.mock('./binary-manager');
 jest.mock('weaviate-client');
+jest.mock('./health-check');
 
 const mockConnectToLocal = connectToLocal as jest.MockedFunction<typeof connectToLocal>;
+const mockWaitForReady = waitForReady as jest.MockedFunction<typeof waitForReady>;
 const MockWeaviateProcess = WeaviateProcess as jest.MockedClass<typeof WeaviateProcess>;
 const MockBinaryManager = BinaryManager as jest.MockedClass<typeof BinaryManager>;
 
@@ -38,6 +41,9 @@ describe('connectToEmbedded', () => {
     } as any;
 
     MockBinaryManager.mockImplementation(() => mockBinaryManager);
+
+    // Mock waitForReady to resolve immediately
+    mockWaitForReady.mockResolvedValue(undefined);
 
     // Mock client with close method
     originalClose = jest.fn().mockResolvedValue(undefined);
@@ -77,15 +83,15 @@ describe('connectToEmbedded', () => {
       expect(mockWeaviateProcess.stop).toHaveBeenCalledTimes(1);
     });
 
-    it('should handle errors during client close gracefully', async () => {
+    it('should stop process even if client close fails (try-finally pattern)', async () => {
       originalClose.mockRejectedValue(new Error('Client close failed'));
 
       const client = await connectToEmbedded();
 
       await expect(client.close()).rejects.toThrow('Client close failed');
 
-      // Process stop should not be called if client close fails
-      expect(mockWeaviateProcess.stop).not.toHaveBeenCalled();
+      // Process stop SHOULD be called even if client close fails (critical cleanup)
+      expect(mockWeaviateProcess.stop).toHaveBeenCalledTimes(1);
     });
 
     it('should handle errors during process stop gracefully', async () => {

@@ -1,6 +1,7 @@
 import { connectToLocal, WeaviateClient, AuthCredentials } from 'weaviate-client';
 import { WeaviateProcess } from './weaviate-process';
 import { BinaryManager } from './binary-manager';
+import { waitForReady } from './health-check';
 
 /**
  * Options for connecting to an embedded Weaviate instance.
@@ -106,8 +107,8 @@ export async function connectToEmbedded(options: EmbeddedOptions = {}): Promise<
   // Binary lifecycle management:
   // ✅ Binary download and management (PRI-734, PRI-735)
   // ✅ Process spawning with environment variables (PRI-737)
+  // ✅ Health check with retry logic (PRI-738)
   // ✅ Shutdown lifecycle and resource cleanup (PRI-740)
-  // TODO: Health check with retry logic (PRI-738)
   // TODO: Port conflict detection (PRI-739)
 
   // Initialize WeaviateProcess for lifecycle management
@@ -124,8 +125,8 @@ export async function connectToEmbedded(options: EmbeddedOptions = {}): Promise<
     additionalEnvVars,
   });
 
-  // TODO [PRI-738]: Uncomment when health check is implemented
-  // await waitForReady(port, grpcPort);
+  // PRI-738: Wait for Weaviate to be ready with health check
+  await waitForReady(port);
 
   // Connect to the embedded instance using the official v3 client
   const client = await connectToLocal({
@@ -143,13 +144,21 @@ export async function connectToEmbedded(options: EmbeddedOptions = {}): Promise<
   client.close = async () => {
     console.log('🛑 Shutting down embedded Weaviate instance...');
 
-    // Close the client connection first
-    await originalClose();
+    // Use try-finally to ensure process cleanup happens even if client close fails
+    // This is critical because:
+    // 1. The embedded process MUST be stopped to avoid resource leaks
+    // 2. Client close failure shouldn't leave orphaned processes
+    // 3. Process cleanup is independent of client connection state
+    try {
+      // Close the client connection first
+      await originalClose();
+    } finally {
+      // Always stop the Weaviate process, even if client close failed
+      // This ensures proper cleanup in all scenarios
+      await weaviateProcess.stop();
 
-    // Stop the Weaviate process gracefully
-    await weaviateProcess.stop();
-
-    console.log('✅ Embedded Weaviate shutdown complete');
+      console.log('✅ Embedded Weaviate shutdown complete');
+    }
   };
 
   // Attach process instance to client for debugging/testing
