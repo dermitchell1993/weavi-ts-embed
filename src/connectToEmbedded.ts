@@ -1,57 +1,11 @@
-import { connectToLocal, WeaviateClient, AuthCredentials } from 'weaviate-client';
+import { connectToLocal, WeaviateClient } from 'weaviate-client';
 import { WeaviateProcess } from './weaviate-process';
 import { BinaryManager } from './binary-manager';
 import { waitForReady } from './health-check';
+import { EmbeddedOptions, validateOptions } from './embedded-options';
 
-/**
- * Options for connecting to an embedded Weaviate instance.
- */
-export interface EmbeddedOptions {
-  /**
-   * The HTTP port for the embedded Weaviate server.
-   * @default 8080
-   */
-  port?: number;
-
-  /**
-   * The gRPC port for the embedded Weaviate server.
-   * @default 50051
-   */
-  grpcPort?: number;
-
-  /**
-   * The version of Weaviate to use.
-   * @default 'latest'
-   */
-  version?: string;
-
-  /**
-   * Custom path to the Weaviate binary.
-   * If not provided, the binary will be downloaded automatically.
-   */
-  binaryPath?: string;
-
-  /**
-   * Path where Weaviate should persist data.
-   * If not provided, data will be stored in a temporary directory.
-   */
-  persistenceDataPath?: string;
-
-  /**
-   * Additional environment variables to pass to the Weaviate process.
-   */
-  additionalEnvVars?: Record<string, string>;
-
-  /**
-   * Additional headers to include in requests to Weaviate.
-   */
-  headers?: Record<string, string>;
-
-  /**
-   * Authentication credentials for Weaviate.
-   */
-  authCredentials?: AuthCredentials;
-}
+// Re-export for convenience
+export type { EmbeddedOptions };
 
 /**
  * Connect to an embedded Weaviate instance.
@@ -79,6 +33,9 @@ export interface EmbeddedOptions {
  * ```
  */
 export async function connectToEmbedded(options: EmbeddedOptions = {}): Promise<WeaviateClient> {
+  // Validate options before proceeding
+  validateOptions(options);
+
   const {
     port = 8080,
     grpcPort = 50051,
