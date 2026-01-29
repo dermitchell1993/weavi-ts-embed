@@ -15,6 +15,21 @@ How we use [Gitflow](https://www.atlassian.com/git/tutorials/comparing-workflows
 - When you are done with your feature you should create a pull request into the main branch.
 - The main branch is protected.
 
+### Documentation
+
+When adding new features or modifying existing APIs:
+
+1. **Add JSDoc comments** to all public functions, classes, and interfaces
+2. **Include examples** using `@example` blocks
+3. **Document parameters** with `@param` and return values with `@returns`
+4. **Generate documentation** to verify it renders correctly:
+   ```bash
+   npm run docs
+   ```
+5. **Check the output** in `docs/api/` to ensure quality
+
+See [docs/api/README.md](docs/api/README.md) for detailed documentation guidelines.
+
 ### Tagging your commit
 
 Always add a reference to your issue to your git commit.

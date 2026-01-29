@@ -21,6 +21,8 @@
     "lint:fix": "npm run lint -- --fix",
     "format": "prettier --write --no-error-on-unmatched-pattern '**/*.{ts,js}' '!dist/**'",
     "format:check": "prettier --check --no-error-on-unmatched-pattern '**/*.{ts,js}' '!dist/**'",
+    "docs": "typedoc",
+    "docs:watch": "typedoc --watch",
     "prepare": "husky install"
   },
   "repository": {
@@ -64,6 +66,7 @@
     "prettier": "^2.8.4",
     "ts-jest": "^29.0.5",
     "tsup": "^6.7.0",
+    "typedoc": "^0.25.13",
     "typescript": "^4.9.5"
   },
   "lint-staged": {
