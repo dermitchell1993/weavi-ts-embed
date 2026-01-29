@@ -144,6 +144,10 @@ describe('validateOptions', () => {
   });
 
   describe('invalid version', () => {
+    it('should reject empty string version', () => {
+      expect(() => validateOptions({ version: '' })).toThrow('Version cannot be empty string');
+    });
+
     it('should reject version with invalid format', () => {
       expect(() => validateOptions({ version: '1.27' })).toThrow(
         'Version must be in format X.Y.Z or "latest"'
@@ -193,6 +197,15 @@ describe('validateOptions', () => {
       );
     });
 
+    it('should reject array as additionalEnvVars', () => {
+      expect(() => validateOptions({ additionalEnvVars: [] as any })).toThrow(
+        'additionalEnvVars must be an object'
+      );
+      expect(() => validateOptions({ additionalEnvVars: ['value'] as any })).toThrow(
+        'additionalEnvVars must be an object'
+      );
+    });
+
     it('should reject additionalEnvVars with non-string values', () => {
       expect(() =>
         validateOptions({
@@ -210,6 +223,11 @@ describe('validateOptions', () => {
       expect(() => validateOptions({ headers: 'string' as any })).toThrow('headers must be an object');
       expect(() => validateOptions({ headers: 123 as any })).toThrow('headers must be an object');
       expect(() => validateOptions({ headers: null as any })).toThrow('headers must be an object');
+    });
+
+    it('should reject array as headers', () => {
+      expect(() => validateOptions({ headers: [] as any })).toThrow('headers must be an object');
+      expect(() => validateOptions({ headers: ['value'] as any })).toThrow('headers must be an object');
     });
 
     it('should reject headers with non-string values', () => {

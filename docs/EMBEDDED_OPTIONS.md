@@ -97,6 +97,59 @@ try {
 ### Validation Rules
 
 - **Ports:** Must be integers between 1024-65535, and different from each other
-- **Version:** Must be `X.Y.Z` format or `'latest'`
-- **Environment Variables & Headers:** Must be objects with string values
+- **Version:** Must be `X.Y.Z` format or `'latest'` (cannot be empty string)
+- **Environment Variables & Headers:** Must be objects with string values (not arrays)
 
+## Common Pitfalls
+
+### Port Conflicts
+```typescript
+// ❌ WRONG - Same port for HTTP and gRPC
+connectToEmbedded({ port: 8080, grpcPort: 8080 });
+// Error: HTTP port and gRPC port must be different
+
+// ✅ CORRECT - Different ports
+connectToEmbedded({ port: 8080, grpcPort: 50051 });
+```
+
+### Invalid Version Format
+```typescript
+// ❌ WRONG - Invalid version formats
+connectToEmbedded({ version: '' });           // Empty string
+connectToEmbedded({ version: '1.27' });       // Missing patch version
+connectToEmbedded({ version: 'v1.27.0' });    // Has 'v' prefix
+connectToEmbedded({ version: '1.27.0-beta' }); // Has prerelease tag
+
+// ✅ CORRECT - Valid version formats
+connectToEmbedded({ version: '1.27.0' });     // Semantic version
+connectToEmbedded({ version: 'latest' });     // Latest stable
+```
+
+### Invalid Environment Variables
+```typescript
+// ❌ WRONG - Array instead of object
+connectToEmbedded({ 
+  additionalEnvVars: ['LOG_LEVEL=debug'] // Arrays not allowed
+});
+
+// ❌ WRONG - Non-string values
+connectToEmbedded({ 
+  additionalEnvVars: { LOG_LEVEL: 123 } // Must be strings
+});
+
+// ✅ CORRECT - Object with string values
+connectToEmbedded({ 
+  additionalEnvVars: { LOG_LEVEL: 'debug' }
+});
+```
+
+### Port Range Issues
+```typescript
+// ❌ WRONG - Ports outside valid range
+connectToEmbedded({ port: 80 });      // Below 1024 (privileged)
+connectToEmbedded({ port: 70000 });   // Above 65535
+connectToEmbedded({ port: 8080.5 });  // Not an integer
+
+// ✅ CORRECT - Ports within valid range
+connectToEmbedded({ port: 8080 });    // Valid range: 1024-65535
+```

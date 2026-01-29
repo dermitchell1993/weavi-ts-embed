@@ -89,8 +89,12 @@ function validatePort(port: number | undefined, portType: string): void {
  * @throws {Error} If the version format is invalid
  */
 function validateVersion(version: string | undefined): void {
-  if (version === undefined || version === '') {
+  if (version === undefined) {
     return;
+  }
+
+  if (version === '') {
+    throw new Error('Version cannot be empty string');
   }
 
   const versionPattern = /^\d+\.\d+\.\d+$/;
@@ -110,7 +114,7 @@ function validateStringRecord(record: Record<string, string> | undefined, fieldN
     return;
   }
 
-  if (typeof record !== 'object' || record === null) {
+  if (typeof record !== 'object' || record === null || Array.isArray(record)) {
     throw new Error(`${fieldName} must be an object`);
   }
 
