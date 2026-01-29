@@ -128,7 +128,6 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
       port: httpPort,
       grpcPort,
       persistenceDataPath: dataDir,
-      verbose: false,
       additionalEnvVars: {
         // Disable clustering for isolated test instances
         RAFT_BOOTSTRAP_EXPECT: '1',
@@ -136,11 +135,13 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
         RAFT_PORT: (8300 + instanceNumber).toString(),
         RAFT_INTERNAL_RPC_PORT: (8301 + instanceNumber).toString(),
         // Set unique memberlist ports
-        CLUSTER_GOSSIP_BIND_PORT: (7946 + instanceNumber).toString(),
+        CLUSTER_GOSSIP_BIND_PORT: clusterPort.toString(),
+        CLUSTER_GOSSIP_ADVERTISE_PORT: clusterPort.toString(),
         CLUSTER_DATA_BIND_PORT: (7947 + instanceNumber).toString(),
         // Disable memberlist to prevent clustering
         DISABLE_MEMBERLIST: 'true',
       },
+      verbose: false,
     });
 
     return instance;
@@ -232,6 +233,7 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
         persistenceDataPath: createTestDataDir(),
         additionalEnvVars: {
           CLUSTER_GOSSIP_BIND_PORT: BASE_CLUSTER_PORT.toString(),
+          CLUSTER_GOSSIP_ADVERTISE_PORT: BASE_CLUSTER_PORT.toString(),
         },
         verbose: false,
       });
@@ -243,6 +245,7 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
         persistenceDataPath: createTestDataDir(),
         additionalEnvVars: {
           CLUSTER_GOSSIP_BIND_PORT: (BASE_CLUSTER_PORT + 1).toString(),
+          CLUSTER_GOSSIP_ADVERTISE_PORT: (BASE_CLUSTER_PORT + 1).toString(),
         },
         verbose: false,
       });
@@ -267,14 +270,15 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
         persistenceDataPath: createTestDataDir(),
         additionalEnvVars: {
           CLUSTER_GOSSIP_BIND_PORT: BASE_CLUSTER_PORT.toString(),
+          CLUSTER_GOSSIP_ADVERTISE_PORT: BASE_CLUSTER_PORT.toString(),
         },
         verbose: false,
       });
 
       expect(instance1.isRunning()).toBe(true);
 
-      // Wait a moment for the first instance to fully bind to ports
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Wait for the first instance to fully bind to ports
+      await new Promise((resolve) => setTimeout(resolve, 3000));
 
       // Try to start second instance with same ports - should fail
       await expect(
@@ -571,6 +575,7 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
         persistenceDataPath: createTestDataDir(),
         additionalEnvVars: {
           CLUSTER_GOSSIP_BIND_PORT: (BASE_CLUSTER_PORT + 1).toString(),
+          CLUSTER_GOSSIP_ADVERTISE_PORT: (BASE_CLUSTER_PORT + 1).toString(),
         },
         verbose: false,
       });
@@ -590,6 +595,8 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
         persistenceDataPath: createTestDataDir(),
         additionalEnvVars: {
           TEST_CONFIG: 'persistent',
+          CLUSTER_GOSSIP_BIND_PORT: BASE_CLUSTER_PORT.toString(),
+          CLUSTER_GOSSIP_ADVERTISE_PORT: BASE_CLUSTER_PORT.toString(),
         },
         verbose: true,
       };
@@ -608,6 +615,7 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
         persistenceDataPath: createTestDataDir(),
         additionalEnvVars: {
           CLUSTER_GOSSIP_BIND_PORT: BASE_CLUSTER_PORT.toString(),
+          CLUSTER_GOSSIP_ADVERTISE_PORT: BASE_CLUSTER_PORT.toString(),
         },
       });
       expect(instance.isRunning()).toBe(true);
@@ -736,6 +744,7 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
             persistenceDataPath: dataDir1,
             additionalEnvVars: {
               CLUSTER_GOSSIP_BIND_PORT: BASE_CLUSTER_PORT.toString(),
+              CLUSTER_GOSSIP_ADVERTISE_PORT: BASE_CLUSTER_PORT.toString(),
             },
             verbose: false,
           }),
@@ -746,6 +755,7 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
             persistenceDataPath: dataDir2,
             additionalEnvVars: {
               CLUSTER_GOSSIP_BIND_PORT: (BASE_CLUSTER_PORT + 1).toString(),
+              CLUSTER_GOSSIP_ADVERTISE_PORT: (BASE_CLUSTER_PORT + 1).toString(),
             },
             verbose: false,
           }),
