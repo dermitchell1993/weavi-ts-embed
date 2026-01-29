@@ -61,6 +61,23 @@ const result = await myCollection.query.fetchObjects();
 await client.close();
 ```
 
+### Authentication
+
+```typescript
+import { connectToEmbedded } from 'weaviate-ts-embedded';
+import { apiKey } from 'weaviate-client';
+
+// Using API key authentication
+const client = await connectToEmbedded({
+  authCredentials: apiKey('your-api-key'),
+  headers: {
+    'X-OpenAI-Api-Key': process.env.OPENAI_API_KEY,
+  },
+});
+
+await client.close();
+```
+
 ### Full Example with TypeScript Generics
 
 ```typescript
