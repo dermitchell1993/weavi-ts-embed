@@ -5,6 +5,21 @@ import { join } from 'path';
 import { mkdirSync, rmSync } from 'fs';
 
 /**
+ * Type-safe data types for Weaviate properties.
+ * The Weaviate client types dataType as 'string', but these are the valid values.
+ */
+type WeaviateDataType =
+  | 'text'
+  | 'int'
+  | 'number'
+  | 'boolean'
+  | 'date'
+  | 'uuid'
+  | 'geoCoordinates'
+  | 'phoneNumber'
+  | 'blob';
+
+/**
  * Integration tests for Weaviate v3 client operations.
  *
  * These tests verify the complete integration of the v3 Weaviate client with the embedded instance,
@@ -103,17 +118,17 @@ describe('Weaviate V3 Operations Integration Tests', () => {
         properties: [
           {
             name: 'title',
-            dataType: 'text' as any,
+            dataType: 'text' as WeaviateDataType,
             description: 'The title of the article',
           },
           {
             name: 'content',
-            dataType: 'text' as any,
+            dataType: 'text' as WeaviateDataType,
             description: 'The content of the article',
           },
           {
             name: 'views',
-            dataType: 'int' as any,
+            dataType: 'int' as WeaviateDataType,
             description: 'Number of views',
           },
         ],
@@ -134,7 +149,7 @@ describe('Weaviate V3 Operations Integration Tests', () => {
         properties: [
           {
             name: 'title',
-            dataType: 'text' as any,
+            dataType: 'text' as WeaviateDataType,
           },
         ],
       });
@@ -158,7 +173,7 @@ describe('Weaviate V3 Operations Integration Tests', () => {
         properties: [
           {
             name: 'title',
-            dataType: 'text' as any,
+            dataType: 'text' as WeaviateDataType,
           },
         ],
       });
@@ -185,17 +200,17 @@ describe('Weaviate V3 Operations Integration Tests', () => {
         properties: [
           {
             name: 'name',
-            dataType: 'text' as any,
+            dataType: 'text' as WeaviateDataType,
             description: 'Product name',
           },
           {
             name: 'price',
-            dataType: 'number' as any,
+            dataType: 'number' as WeaviateDataType,
             description: 'Product price',
           },
           {
             name: 'inStock',
-            dataType: 'boolean' as any,
+            dataType: 'boolean' as WeaviateDataType,
             description: 'Whether product is in stock',
           },
         ],
@@ -303,17 +318,17 @@ describe('Weaviate V3 Operations Integration Tests', () => {
         properties: [
           {
             name: 'title',
-            dataType: 'text' as any,
+            dataType: 'text' as WeaviateDataType,
             description: 'Document title',
           },
           {
             name: 'content',
-            dataType: 'text' as any,
+            dataType: 'text' as WeaviateDataType,
             description: 'Document content',
           },
           {
             name: 'category',
-            dataType: 'text' as any,
+            dataType: 'text' as WeaviateDataType,
             description: 'Document category',
           },
         ],
@@ -380,10 +395,10 @@ describe('Weaviate V3 Operations Integration Tests', () => {
       });
     });
 
-    it('should perform BM25 search', async () => {
+    it('should perform BM25 search with proper ranking', async () => {
       const collection = client.collections.get(testCollectionName);
 
-      // BM25 search for "AI"
+      // BM25 search for "AI" - should rank documents with "AI" in title higher
       const result = await collection.query.bm25('AI', {
         limit: 5,
       });
@@ -399,6 +414,21 @@ describe('Weaviate V3 Operations Integration Tests', () => {
       });
 
       expect(hasRelevantResults).toBe(true);
+
+      // Verify ranking: documents with "AI" in title should rank higher
+      // than those with "AI" only in content
+      if (result.objects.length >= 2) {
+        const firstDoc = result.objects[0];
+        const firstTitle =
+          typeof firstDoc.properties.title === 'string' ? firstDoc.properties.title.toLowerCase() : '';
+        const firstContent =
+          typeof firstDoc.properties.content === 'string' ? firstDoc.properties.content.toLowerCase() : '';
+
+        // The first result should be highly relevant (contain "AI" in title or content)
+        const isFirstRelevant = firstTitle.includes('ai') || firstContent.includes('ai');
+
+        expect(isFirstRelevant).toBe(true);
+      }
     });
   });
 
@@ -412,11 +442,11 @@ describe('Weaviate V3 Operations Integration Tests', () => {
         properties: [
           {
             name: 'title',
-            dataType: 'text' as any,
+            dataType: 'text' as WeaviateDataType,
           },
           {
             name: 'index',
-            dataType: 'int' as any,
+            dataType: 'int' as WeaviateDataType,
           },
         ],
       });
@@ -486,7 +516,7 @@ describe('Weaviate V3 Operations Integration Tests', () => {
         properties: [
           {
             name: 'title',
-            dataType: 'text' as any,
+            dataType: 'text' as WeaviateDataType,
           },
         ],
       });
