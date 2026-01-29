@@ -61,6 +61,55 @@ const result = await myCollection.query.fetchObjects();
 await client.close();
 ```
 
+### Headers & Authentication
+
+**Custom Headers** (e.g., for OpenAI API keys):
+
+```typescript
+import { connectToEmbedded } from 'weaviate-ts-embedded';
+
+const client = await connectToEmbedded({
+  headers: {
+    'X-OpenAI-Api-Key': process.env.OPENAI_API_KEY || 'sk-...',
+  },
+});
+
+await client.close();
+```
+
+**API Key Authentication** (accepts string or ApiKey class):
+
+```typescript
+import { connectToEmbedded } from 'weaviate-ts-embedded';
+import { ApiKey } from 'weaviate-client';
+
+// Option 1: Using string (automatically converted to ApiKey)
+const client1 = await connectToEmbedded({
+  authCredentials: 'your-weaviate-api-key',
+});
+
+// Option 2: Using ApiKey class explicitly
+const client2 = await connectToEmbedded({
+  authCredentials: new ApiKey('your-weaviate-api-key'),
+});
+
+await client1.close();
+await client2.close();
+```
+
+**Combined Headers + Authentication**:
+
+```typescript
+const client = await connectToEmbedded({
+  headers: {
+    'X-OpenAI-Api-Key': process.env.OPENAI_API_KEY,
+  },
+  authCredentials: 'your-weaviate-api-key',
+});
+
+await client.close();
+```
+
 ### Full Example with TypeScript Generics
 
 ```typescript
