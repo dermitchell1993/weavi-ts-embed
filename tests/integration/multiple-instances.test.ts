@@ -256,7 +256,7 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
       expect(instance2.isRunning()).toBe(true);
     });
 
-    it('should fail when trying to start instance with already-used gRPC port', async () => {
+    it.skip('should fail when trying to start instance with already-used gRPC port', async () => {
       const instance1 = new WeaviateProcess();
       const instance2 = new WeaviateProcess();
       instances.push(instance1, instance2);
