@@ -34,6 +34,8 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
   let binaryPath: string;
   let instances: WeaviateProcess[] = [];
   let testDataDirs: string[] = [];
+  let consoleLogSpy: jest.SpyInstance;
+  let consoleErrorSpy: jest.SpyInstance;
 
   // Base port ranges for multiple instances
   const BASE_HTTP_PORT = 20080;
@@ -50,8 +52,9 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
 
     try {
       binaryPath = await binaryManager.ensureBinary('1.33.15');
-      console.log(`Using Weaviate binary at: ${binaryPath}`);
+      // Note: Console output suppressed in beforeEach
     } catch (error) {
+      // Allow error output during setup failures
       console.error('Failed to download Weaviate binary:', error);
       console.error('Error details:', error instanceof Error ? error.message : String(error));
 
@@ -63,6 +66,12 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
     }
   });
 
+  beforeEach(() => {
+    // Suppress console output during tests for cleaner test output
+    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+  });
+
   afterEach(async () => {
     // Stop all running instances
     await Promise.all(
@@ -71,7 +80,7 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
           try {
             await instance.stop(5000);
           } catch (error) {
-            console.error('Error stopping instance in afterEach:', error);
+            // Error already suppressed by consoleErrorSpy
           }
         }
       })
@@ -87,7 +96,7 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
           rmSync(dir, { recursive: true, force: true });
         }
       } catch (error) {
-        console.error(`Error cleaning up test data directory ${dir}:`, error);
+        // Error already suppressed by consoleErrorSpy
       }
     });
 
@@ -96,6 +105,10 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
 
     // Small delay to ensure complete cleanup
     await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // Restore console methods
+    consoleLogSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
   });
 
   /**
