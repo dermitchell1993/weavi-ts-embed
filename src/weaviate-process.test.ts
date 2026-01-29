@@ -132,6 +132,62 @@ describe('WeaviateProcess', () => {
       });
     });
 
+    it('should pass ENABLE_MODULES environment variable', async () => {
+      const configWithModules = {
+        ...validConfig,
+        additionalEnvVars: {
+          ENABLE_MODULES: 'text2vec-openai,text2vec-cohere',
+        },
+      };
+
+      await weaviateProcess.start(configWithModules);
+
+      const spawnCall = mockSpawn.mock.calls[0];
+      const spawnOptions = spawnCall[2];
+
+      expect(spawnOptions?.env?.ENABLE_MODULES).toBe('text2vec-openai,text2vec-cohere');
+    });
+
+    it('should pass LOG_LEVEL environment variable', async () => {
+      const configWithLogLevel = {
+        ...validConfig,
+        additionalEnvVars: {
+          LOG_LEVEL: 'debug',
+        },
+      };
+
+      await weaviateProcess.start(configWithLogLevel);
+
+      const spawnCall = mockSpawn.mock.calls[0];
+      const spawnOptions = spawnCall[2];
+
+      expect(spawnOptions?.env?.LOG_LEVEL).toBe('debug');
+    });
+
+    it('should pass multiple common environment variables', async () => {
+      const configWithMultipleVars = {
+        ...validConfig,
+        additionalEnvVars: {
+          ENABLE_MODULES: 'text2vec-openai',
+          LOG_LEVEL: 'info',
+          DEFAULT_VECTORIZER_MODULE: 'text2vec-openai',
+          AUTHENTICATION_APIKEY_ENABLED: 'true',
+        },
+      };
+
+      await weaviateProcess.start(configWithMultipleVars);
+
+      const spawnCall = mockSpawn.mock.calls[0];
+      const spawnOptions = spawnCall[2];
+
+      expect(spawnOptions?.env).toMatchObject({
+        ENABLE_MODULES: 'text2vec-openai',
+        LOG_LEVEL: 'info',
+        DEFAULT_VECTORIZER_MODULE: 'text2vec-openai',
+        AUTHENTICATION_APIKEY_ENABLED: 'true',
+      });
+    });
+
     it('should capture stdout output', async () => {
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
