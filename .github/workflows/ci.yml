@@ -74,7 +74,7 @@ jobs:
           
           console.log('Downloading Weaviate binaries...');
           try {
-            const binaryPath = await manager.ensureBinary();
+            const binaryPath = await manager.ensureBinary('latest');
             console.log('Binary downloaded to:', binaryPath);
             console.log('Cache directory:', cacheDir);
             process.exit(0);
