@@ -136,14 +136,13 @@ jobs:
           if-no-files-found: ignore
 
   # Job 4: Integration Tests (macOS & Linux)
+  # Note: Node 18 integration tests are skipped on PRs (run only on main branch)
+  # because Node 18 is 3-4x slower due to V8 engine performance; this saves ~4min per PR
   integration-tests:
     name: Integration Tests (${{ matrix.os }}, Node ${{ matrix.node-version }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     needs: setup-binaries
-    # Skip Node 18 integration tests on PRs (only run on main branch)
-    # Node 18 is 3-4x slower due to V8 engine performance; this saves ~4min per PR
-    if: matrix.node-version != 18 || github.event_name == 'push'
     strategy:
       fail-fast: false
       matrix:
@@ -173,6 +172,8 @@ jobs:
         run: npm ci
 
       - name: Run integration tests only
+        # Skip Node 18 on PRs (only run on push to main/branches) - saves ~4min per PR
+        if: matrix.node-version != 18 || github.event_name == 'push'
         run: npx jest tests/integration --maxWorkers=3 --verbose
         env:
           CI: true
