@@ -118,7 +118,7 @@ export class WeaviateProcess {
     // Prepare environment variables
     const env = {
       ...process.env,
-      WEAVIATE_PORT: config.port.toString(),
+      PORT: config.port.toString(),
       GRPC_PORT: config.grpcPort.toString(),
       PERSISTENCE_DATA_PATH: resolvedDataPath,
       ...config.additionalEnvVars,
