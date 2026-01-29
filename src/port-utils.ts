@@ -72,6 +72,14 @@ export async function isPortAvailable(port: number): Promise<boolean> {
  * ```
  */
 export async function checkPorts(httpPort: number, grpcPort: number): Promise<void> {
+  // Check if HTTP and gRPC ports are the same
+  if (httpPort === grpcPort) {
+    throw new Error(
+      `HTTP and gRPC ports cannot be the same. HTTP port: ${httpPort}, gRPC port: ${grpcPort}. ` +
+        'Use different ports for HTTP and gRPC services.'
+    );
+  }
+
   const httpAvailable = await isPortAvailable(httpPort);
   const grpcAvailable = await isPortAvailable(grpcPort);
 
