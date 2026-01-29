@@ -10,12 +10,14 @@ on:
   pull_request:
     branches:
       - main
+      - feature/**
 
 jobs:
   # Job 1: Lint & Type Check (fast feedback)
   lint-and-typecheck:
     name: Lint & Type Check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -42,6 +44,7 @@ jobs:
   unit-tests:
     name: Unit Tests (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: lint-and-typecheck
     strategy:
       fail-fast: false
@@ -60,8 +63,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run unit tests
-        run: npm test
+      - name: Run unit tests only (exclude integration)
+        run: npx jest --testPathIgnorePatterns=integration
 
       - name: Upload test coverage
         if: matrix.node-version == 18
@@ -73,8 +76,9 @@ jobs:
 
   # Job 3: Integration Tests (macOS & Linux)
   integration-tests:
-    name: Integration Tests (${{ matrix.os }})
+    name: Integration Tests (${{ matrix.os }}, Node ${{ matrix.node-version }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     needs: lint-and-typecheck
     strategy:
       fail-fast: false
@@ -94,8 +98,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run integration tests
-        run: npm test
+      - name: Run integration tests only
+        run: npx jest tests/integration
         env:
           CI: true
 
@@ -103,6 +107,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: [unit-tests, integration-tests]
     steps:
       - name: Checkout code
@@ -131,8 +136,12 @@ jobs:
   publish:
     name: Publish to npm
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: build
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+      packages: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -156,12 +165,8 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTOMATION_TOKEN }}
 
       - name: Create GitHub Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
-
+          generate_release_notes: true
+          files: |
+            dist/**
