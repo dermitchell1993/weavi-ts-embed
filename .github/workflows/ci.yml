@@ -141,6 +141,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     needs: setup-binaries
+    # Skip Node 18 integration tests on PRs (only run on main branch)
+    # Node 18 is 3-4x slower due to V8 engine performance; this saves ~4min per PR
+    if: matrix.node-version != 18 || github.event_name == 'push'
     strategy:
       fail-fast: false
       matrix:
