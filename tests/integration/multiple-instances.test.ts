@@ -222,7 +222,7 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
         grpcPort: grpcPort1,
         persistenceDataPath: createTestDataDir(),
         additionalEnvVars: {
-          CLUSTER_GOSSIP_BIND_PORT: (BASE_CLUSTER_PORT).toString(),
+          CLUSTER_GOSSIP_BIND_PORT: BASE_CLUSTER_PORT.toString(),
         },
         verbose: false,
       });
@@ -264,6 +264,9 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
 
       expect(instance1.isRunning()).toBe(true);
 
+      // Wait a moment for the first instance to fully bind to ports
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       // Try to start second instance with same ports - should fail
       await expect(
         instance2.start({
@@ -271,6 +274,9 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
           port, // Same HTTP port - conflict!
           grpcPort,
           persistenceDataPath: createTestDataDir(),
+          additionalEnvVars: {
+            CLUSTER_GOSSIP_BIND_PORT: (BASE_CLUSTER_PORT + 1).toString(),
+          },
           verbose: false,
         })
       ).rejects.toThrow(/port.*already in use/i);
@@ -612,8 +618,8 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
       const pid1 = instance1.getPid();
       const pid2 = instance2.getPid();
 
-      // Wait a bit to ensure both are stable
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Wait longer to ensure both are fully stable
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       // Verify both still running with same PIDs (no interference)
       expect(instance1.isRunning()).toBe(true);
