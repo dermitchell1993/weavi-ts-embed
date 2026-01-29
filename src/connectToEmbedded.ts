@@ -1,4 +1,7 @@
 import { connectToLocal, WeaviateClient, AuthCredentials } from 'weaviate-client';
+import { WeaviateProcess } from './weaviate-process';
+import { BinaryManager } from './binary-manager';
+import { waitForReady } from './health-check';
 
 /**
  * Options for connecting to an embedded Weaviate instance.
@@ -92,7 +95,6 @@ export async function connectToEmbedded(options: EmbeddedOptions = {}): Promise<
   // TODO [PRI-737]: Implement process spawning with environment variable support
   // TODO [PRI-738]: Implement health check with retry logic
   // TODO [PRI-739]: Implement port management and conflict detection
-  // TODO [PRI-740]: Implement shutdown lifecycle and resource cleanup
 
   console.log('[Embedded Weaviate] Starting embedded instance...');
   console.log(`[Embedded Weaviate] Version: ${version}`);
@@ -102,15 +104,29 @@ export async function connectToEmbedded(options: EmbeddedOptions = {}): Promise<
   console.log(`[Embedded Weaviate] Data Path: ${persistenceDataPath || '(temporary)'}`);
   console.log(`[Embedded Weaviate] Additional Env Vars: ${Object.keys(additionalEnvVars).length} variables`);
 
-  // STUB: In future PRs, this will:
-  // 1. Check if binary exists at binaryPath or download it (PRI-734)
-  // 2. Detect platform and select correct binary (PRI-735)
-  // 3. Spawn Weaviate process with environment variables (PRI-737)
-  // 4. Wait for health check to pass (PRI-738)
-  // 5. Handle port conflicts gracefully (PRI-739)
+  // Binary lifecycle management:
+  // ✅ Binary download and management (PRI-734, PRI-735)
+  // ✅ Process spawning with environment variables (PRI-737)
+  // ✅ Health check with retry logic (PRI-738)
+  // ✅ Shutdown lifecycle and resource cleanup (PRI-740)
+  // TODO: Port conflict detection (PRI-739)
 
-  console.log('[Embedded Weaviate] STUB: Binary lifecycle not yet implemented');
-  console.log('[Embedded Weaviate] Assuming Weaviate is already running on specified ports...');
+  // Initialize WeaviateProcess for lifecycle management
+  const weaviateProcess = new WeaviateProcess();
+
+  // PRI-737: Process spawning with binary management
+  const binaryManager = new BinaryManager();
+  const resolvedBinaryPath = binaryPath || (await binaryManager.ensureBinary(version));
+  await weaviateProcess.start({
+    binaryPath: resolvedBinaryPath,
+    port,
+    grpcPort,
+    persistenceDataPath,
+    additionalEnvVars,
+  });
+
+  // PRI-738: Wait for Weaviate to be ready with health check
+  await waitForReady(port);
 
   // Connect to the embedded instance using the official v3 client
   const client = await connectToLocal({
@@ -123,8 +139,31 @@ export async function connectToEmbedded(options: EmbeddedOptions = {}): Promise<
 
   console.log('[Embedded Weaviate] Connected successfully!');
 
-  // TODO [PRI-740]: Wrap client.close() to also stop the embedded process
-  // For now, client.close() only closes the client connection
+  // Hook into client.close() to gracefully shut down the embedded process
+  const originalClose = client.close.bind(client);
+  client.close = async () => {
+    console.log('🛑 Shutting down embedded Weaviate instance...');
+
+    // Use try-finally to ensure process cleanup happens even if client close fails
+    // This is critical because:
+    // 1. The embedded process MUST be stopped to avoid resource leaks
+    // 2. Client close failure shouldn't leave orphaned processes
+    // 3. Process cleanup is independent of client connection state
+    try {
+      // Close the client connection first
+      await originalClose();
+    } finally {
+      // Always stop the Weaviate process, even if client close failed
+      // This ensures proper cleanup in all scenarios
+      await weaviateProcess.stop();
+
+      console.log('✅ Embedded Weaviate shutdown complete');
+    }
+  };
+
+  // Attach process instance to client for debugging/testing
+  // This allows checking process state and enables better testing
+  (client as any).__weaviateProcess = weaviateProcess;
 
   return client;
 }
