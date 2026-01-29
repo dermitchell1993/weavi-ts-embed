@@ -59,7 +59,7 @@ describe('Weaviate V3 Operations Integration Tests', () => {
         additionalEnvVars: {
           AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true',
         },
-        healthCheckTimeout: 60000, // Increase timeout for Node 20/22 compatibility
+        healthCheckTimeout: 90000, // Increased to 90s for Node 20/22 (slower startup)
       });
       console.log('[V3 Operations Test] Connected successfully!');
     } catch (error) {
