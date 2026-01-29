@@ -262,7 +262,8 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
       instances.push(instance1, instance2);
 
       const port = BASE_HTTP_PORT;
-      const grpcPort = BASE_GRPC_PORT;
+      // Use same port for gRPC and HTTP since Weaviate might use same port
+      const grpcPort = BASE_HTTP_PORT;
 
       // Start first instance
       await instance1.start({
