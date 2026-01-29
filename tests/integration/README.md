@@ -55,6 +55,19 @@ Integration tests have a 60-second timeout per test to account for:
 - Graceful shutdown periods
 - Resource cleanup
 
+### Expected Test Execution Time
+
+**First Run (with binary download):**
+- Download time: ~30-60 seconds (depends on network speed)
+- Test execution: ~15-20 seconds
+- **Total: ~45-80 seconds**
+
+**Subsequent Runs (binary cached):**
+- Test execution: ~15-20 seconds
+- **Total: ~15-20 seconds**
+
+**Per Test Average:** 1-2 seconds (after setup)
+
 ## Test Isolation
 
 Each test:
@@ -62,6 +75,92 @@ Each test:
 - Cleans up processes in `afterEach` hooks
 - Verifies port availability before starting
 - Removes test data directories after completion
+
+## CI/CD Integration
+
+### GitHub Actions
+
+Add this to your workflow file (`.github/workflows/test.yml`):
+
+```yaml
+name: Integration Tests
+
+on: [push, pull_request]
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run integration tests
+        run: npm test -- tests/integration
+        env:
+          # Optional: Customize ports if needed
+          TEST_PORT: 19080
+          TEST_GRPC_PORT: 51051
+```
+
+### GitLab CI
+
+Add this to your `.gitlab-ci.yml`:
+
+```yaml
+integration-tests:
+  stage: test
+  image: node:18
+  script:
+    - npm ci
+    - npm test -- tests/integration
+  variables:
+    TEST_PORT: "19080"
+    TEST_GRPC_PORT: "51051"
+```
+
+### CircleCI
+
+Add this to your `.circleci/config.yml`:
+
+```yaml
+version: 2.1
+jobs:
+  integration-tests:
+    docker:
+      - image: cimg/node:18.0
+    steps:
+      - checkout
+      - run: npm ci
+      - run: npm test -- tests/integration
+```
+
+### CI/CD Best Practices
+
+1. **Cache Weaviate Binary**: Cache the `~/.weaviate-embedded/` directory to speed up subsequent runs
+2. **Parallel Execution**: Run integration tests separately from unit tests
+3. **Timeout Configuration**: Set job timeout to at least 10 minutes for first run
+4. **Resource Allocation**: Ensure at least 2GB RAM available for test execution
+
+## Environment Variables
+
+The following environment variables can be used to customize test execution:
+
+- `TEST_PORT`: Override the default HTTP port (default: 19080)
+- `TEST_GRPC_PORT`: Override the default gRPC port (default: 51051)
+- `WEAVIATE_BINARY_PATH`: Use a specific binary path instead of downloading
+
+Example:
+```bash
+TEST_PORT=20080 TEST_GRPC_PORT=52051 npm test -- tests/integration
+```
 
 ## Troubleshooting
 

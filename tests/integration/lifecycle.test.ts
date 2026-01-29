@@ -6,6 +6,29 @@ import { join } from 'path';
 import { mkdirSync, rmSync } from 'fs';
 
 /**
+ * Helper function to check if a process is running (cross-platform).
+ * On Unix-like systems, uses process.kill(pid, 0).
+ * On Windows, this check is less reliable, so we skip the assertion.
+ *
+ * @param pid Process ID to check
+ * @returns true if process exists, false otherwise (or undefined on Windows)
+ */
+function isProcessRunning(pid: number): boolean | undefined {
+  if (process.platform === 'win32') {
+    // Windows: process.kill(pid, 0) is unreliable, skip the check
+    return undefined;
+  }
+
+  try {
+    // Unix-like systems: signal 0 checks if process exists without killing it
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
  * Integration tests for Weaviate process lifecycle management.
  *
  * These tests verify the complete lifecycle of the embedded Weaviate process,
@@ -22,8 +45,9 @@ describe('WeaviateProcess Lifecycle Integration Tests', () => {
 
   // Use a unique port range to avoid conflicts with other tests or services
   // Note: PR #15 uses 18080-18098, so we use 19080+ to avoid conflicts
-  const TEST_PORT = 19080;
-  const TEST_GRPC_PORT = 51051;
+  // Can be overridden via environment variables: TEST_PORT, TEST_GRPC_PORT
+  const TEST_PORT = parseInt(process.env.TEST_PORT || '19080', 10);
+  const TEST_GRPC_PORT = parseInt(process.env.TEST_GRPC_PORT || '51051', 10);
 
   // Increase timeout for integration tests as they involve real process operations
   jest.setTimeout(60000);
@@ -172,12 +196,13 @@ describe('WeaviateProcess Lifecycle Integration Tests', () => {
       expect(weaviateProcess.isRunning()).toBe(false);
       expect(weaviateProcess.getPid()).toBeUndefined();
 
-      // Verify process is actually terminated
-      // On Unix systems, we can check if process exists
-      if (pid && process.platform !== 'win32') {
-        expect(() => {
-          process.kill(pid, 0); // Signal 0 checks if process exists
-        }).toThrow(); // Should throw if process doesn't exist
+      // Verify process is actually terminated (cross-platform)
+      if (pid) {
+        const stillRunning = isProcessRunning(pid);
+        // On Windows, we skip this check as it's unreliable
+        if (stillRunning !== undefined) {
+          expect(stillRunning).toBe(false);
+        }
       }
     });
 
@@ -224,11 +249,12 @@ describe('WeaviateProcess Lifecycle Integration Tests', () => {
 
       expect(weaviateProcess.isRunning()).toBe(false);
 
-      // Process should have exited within the timeout
-      if (pid && process.platform !== 'win32') {
-        expect(() => {
-          process.kill(pid, 0);
-        }).toThrow();
+      // Process should have exited within the timeout (cross-platform)
+      if (pid) {
+        const stillRunning = isProcessRunning(pid);
+        if (stillRunning !== undefined) {
+          expect(stillRunning).toBe(false);
+        }
       }
     });
   });
@@ -252,11 +278,12 @@ describe('WeaviateProcess Lifecycle Integration Tests', () => {
 
       expect(weaviateProcess.isRunning()).toBe(false);
 
-      // Verify process was terminated
-      if (pid && process.platform !== 'win32') {
-        expect(() => {
-          process.kill(pid, 0);
-        }).toThrow();
+      // Verify process was terminated (cross-platform)
+      if (pid) {
+        const stillRunning = isProcessRunning(pid);
+        if (stillRunning !== undefined) {
+          expect(stillRunning).toBe(false);
+        }
       }
     });
   });
@@ -283,11 +310,12 @@ describe('WeaviateProcess Lifecycle Integration Tests', () => {
       // Verify ports are released and can be reused
       await expect(checkPorts(TEST_PORT, TEST_GRPC_PORT)).resolves.not.toThrow();
 
-      // Verify process is terminated
-      if (pid && process.platform !== 'win32') {
-        expect(() => {
-          process.kill(pid, 0);
-        }).toThrow();
+      // Verify process is terminated (cross-platform)
+      if (pid) {
+        const stillRunning = isProcessRunning(pid);
+        if (stillRunning !== undefined) {
+          expect(stillRunning).toBe(false);
+        }
       }
     });
 
