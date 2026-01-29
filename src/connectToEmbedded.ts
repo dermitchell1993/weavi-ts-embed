@@ -1,4 +1,6 @@
 import { connectToLocal, WeaviateClient, AuthCredentials } from 'weaviate-client';
+import { WeaviateProcess } from './weaviate-process';
+import { BinaryManager } from './binary-manager';
 
 /**
  * Options for connecting to an embedded Weaviate instance.
@@ -92,7 +94,6 @@ export async function connectToEmbedded(options: EmbeddedOptions = {}): Promise<
   // TODO [PRI-737]: Implement process spawning with environment variable support
   // TODO [PRI-738]: Implement health check with retry logic
   // TODO [PRI-739]: Implement port management and conflict detection
-  // TODO [PRI-740]: Implement shutdown lifecycle and resource cleanup
 
   console.log('[Embedded Weaviate] Starting embedded instance...');
   console.log(`[Embedded Weaviate] Version: ${version}`);
@@ -112,6 +113,24 @@ export async function connectToEmbedded(options: EmbeddedOptions = {}): Promise<
   console.log('[Embedded Weaviate] STUB: Binary lifecycle not yet implemented');
   console.log('[Embedded Weaviate] Assuming Weaviate is already running on specified ports...');
 
+  // Initialize WeaviateProcess for lifecycle management
+  // This will be fully integrated when PRI-737 (Process Spawning) is complete
+  const weaviateProcess = new WeaviateProcess();
+
+  // TODO [PRI-737]: Uncomment when process spawning is implemented
+  // const binaryManager = new BinaryManager();
+  // const resolvedBinaryPath = binaryPath || await binaryManager.ensureBinary(version);
+  // await weaviateProcess.start({
+  //   binaryPath: resolvedBinaryPath,
+  //   port,
+  //   grpcPort,
+  //   persistenceDataPath,
+  //   additionalEnvVars,
+  // });
+
+  // TODO [PRI-738]: Uncomment when health check is implemented
+  // await waitForReady(port, grpcPort);
+
   // Connect to the embedded instance using the official v3 client
   const client = await connectToLocal({
     host: 'localhost',
@@ -123,8 +142,19 @@ export async function connectToEmbedded(options: EmbeddedOptions = {}): Promise<
 
   console.log('[Embedded Weaviate] Connected successfully!');
 
-  // TODO [PRI-740]: Wrap client.close() to also stop the embedded process
-  // For now, client.close() only closes the client connection
+  // Hook into client.close() to gracefully shut down the embedded process
+  const originalClose = client.close.bind(client);
+  client.close = async () => {
+    console.log('🛑 Shutting down embedded Weaviate instance...');
+
+    // Close the client connection first
+    await originalClose();
+
+    // Stop the Weaviate process gracefully
+    await weaviateProcess.stop();
+
+    console.log('✅ Embedded Weaviate shutdown complete');
+  };
 
   return client;
 }
