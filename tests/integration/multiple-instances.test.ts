@@ -43,10 +43,11 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
 
   beforeAll(async () => {
     // Set up binary manager and ensure the Weaviate binary is available
-    binaryManager = new BinaryManager();
+    // Skip checksum verification as checksums files are not available for this version
+    binaryManager = new BinaryManager({ skipChecksumVerification: true });
 
     try {
-      binaryPath = await binaryManager.ensureBinary('1.23.0');
+      binaryPath = await binaryManager.ensureBinary('1.33.15');
       console.log(`Using Weaviate binary at: ${binaryPath}`);
     } catch (error) {
       console.error('Failed to download Weaviate binary:', error);
