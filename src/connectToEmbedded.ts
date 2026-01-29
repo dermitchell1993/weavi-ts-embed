@@ -86,6 +86,10 @@ export async function connectToEmbedded(options: EmbeddedOptions = {}): Promise<
   // PRI-738: Wait for Weaviate to be ready with health check
   await waitForReady(port, { timeout: healthCheckTimeout });
 
+  // Add a small delay to ensure gRPC server is ready (especially important on Node 20/22)
+  // The HTTP health check may pass before gRPC is fully ready to accept connections
+  await new Promise(resolve => setTimeout(resolve, 2000));
+
   // Connect to the embedded instance using the official v3 client
   const client = await connectToLocal({
     host: 'localhost',
@@ -94,6 +98,11 @@ export async function connectToEmbedded(options: EmbeddedOptions = {}): Promise<
     headers,
     authCredentials,
   });
+
+  // Validate that the client was created successfully
+  if (!client) {
+    throw new Error('Failed to connect to Weaviate: connectToLocal returned undefined. This may indicate a gRPC connection issue.');
+  }
 
   console.log('[Embedded Weaviate] Connected successfully!');
 
