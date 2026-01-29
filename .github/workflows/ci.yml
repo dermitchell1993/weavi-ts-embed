@@ -170,7 +170,7 @@ jobs:
         run: npm ci
 
       - name: Run integration tests only
-        run: npx jest tests/integration --maxWorkers=2 --verbose
+        run: npx jest tests/integration --maxWorkers=3 --verbose
         env:
           CI: true
           NODE_OPTIONS: '--max-old-space-size=4096'
