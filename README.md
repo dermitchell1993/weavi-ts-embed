@@ -256,7 +256,14 @@ See the [Examples README](./examples/README.md) for a complete overview.
 
 ### 📖 Official Documentation
 
-- **[API Documentation](https://dermitchell1993.github.io/weavi-ts-embed/)** - Complete TypeDoc-generated API reference
+### API Documentation
+
+- **[Complete API Reference](./docs/api/index.html)** - Full TypeDoc-generated API documentation
+- **[Configuration Options Guide](./docs/EMBEDDED_OPTIONS.md)** - Detailed `EmbeddedOptions` reference
+- **[Troubleshooting Guide](./docs/TROUBLESHOOTING.md)** - Common issues and solutions
+
+### Additional Resources
+
 - [Weaviate Embedded Installation Guide](https://weaviate.io/developers/weaviate/installation/embedded)
 - [Weaviate TypeScript Client v3 Docs](https://weaviate.io/developers/weaviate/client-libraries/typescript)
 - [Weaviate Environment Variables Reference](https://weaviate.io/developers/weaviate/config-refs/env-vars)

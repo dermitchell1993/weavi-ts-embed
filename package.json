@@ -14,7 +14,9 @@
     "/dist/index.d.ts"
   ],
   "scripts": {
-    "test": "tsc -noEmit -p tsconfig-test.json && jest --useStderr --runInBand --detectOpenHandles",
+    "test": "npx tsc -noEmit -p tsconfig-test.json && jest --useStderr --runInBand --detectOpenHandles",
+    "test:unit": "jest --config jest.unit.config.cjs",
+    "test:unit:coverage": "jest --config jest.unit.config.cjs --coverage",
     "build": "npm run lint && tsup src/index.ts --format esm --dts --clean --platform node --minify",
     "prepack": "npm run build",
     "lint": "eslint --ext .ts,.js .",
@@ -22,6 +24,7 @@
     "format": "prettier --write --no-error-on-unmatched-pattern '**/*.{ts,js}' '!dist/**' '!docs/**'",
     "format:check": "prettier --check --no-error-on-unmatched-pattern '**/*.{ts,js}' '!dist/**' '!docs/**'",
     "docs": "typedoc",
+    "docs:watch": "typedoc --watch",
     "prepare": "husky install"
   },
   "repository": {

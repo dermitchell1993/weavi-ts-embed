@@ -2,16 +2,37 @@
   "$schema": "https://typedoc.org/schema.json",
   "entryPoints": ["src/index.ts"],
   "out": "docs/api",
-  "plugin": [],
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/tests/**/*",
+    "**/node_modules/**/*"
+  ],
   "excludePrivate": true,
+  "excludeProtected": false,
   "excludeInternal": true,
-  "excludeExternals": true,
   "readme": "README.md",
-  "name": "Weaviate TypeScript Embedded Client",
+  "plugin": [],
   "includeVersion": true,
-  "sort": ["source-order"],
+  "name": "Weaviate TypeScript Embedded",
+  "navigationLinks": {
+    "GitHub": "https://github.com/dermitchell1993/weavi-ts-embed",
+    "Weaviate Docs": "https://weaviate.io/developers/weaviate"
+  },
+  "titleLink": "https://github.com/dermitchell1993/weavi-ts-embed",
+  "gitRevision": "feature/WeaviateTS-EmbeddedClientv3",
+  "sort": ["source-order", "required-first", "kind"],
+  "categorizeByGroup": false,
+  "defaultCategory": "API Reference",
+  "categoryOrder": ["*"],
   "hideGenerator": false,
-  "githubPages": false,
-  "disableSources": false
+  "searchInComments": true,
+  "cleanOutputDir": true,
+  "treatWarningsAsErrors": false,
+  "visibilityFilters": {
+    "protected": false,
+    "private": false,
+    "inherited": true,
+    "external": false
+  }
 }
-
