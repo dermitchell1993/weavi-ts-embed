@@ -86,14 +86,64 @@ export async function connectToEmbedded(options: EmbeddedOptions = {}): Promise<
   // PRI-738: Wait for Weaviate to be ready with health check
   await waitForReady(port, { timeout: healthCheckTimeout });
 
-  // Connect to the embedded instance using the official v3 client
-  const client = await connectToLocal({
-    host: 'localhost',
-    port,
-    grpcPort,
-    headers,
-    authCredentials,
-  });
+  // Connect to the embedded instance using the official v3 client with retry logic
+  // Node 20/22 require more time for gRPC initialization than Node 18
+  let client: WeaviateClient | undefined;
+  const maxRetries = 5;
+  const initialDelay = 2000; // 2 seconds
+
+  // eslint-disable-next-line no-await-in-loop
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      client = await connectToLocal({
+        host: 'localhost',
+        port,
+        grpcPort,
+        headers,
+        authCredentials,
+      });
+
+      if (client) {
+        console.log(`[Embedded Weaviate] Successfully connected on attempt ${attempt}`);
+        break;
+      } else {
+        console.warn(
+          `[Embedded Weaviate] Attempt ${attempt}/${maxRetries}: connectToLocal returned undefined`
+        );
+      }
+    } catch (error) {
+      console.warn(
+        `[Embedded Weaviate] Attempt ${attempt}/${maxRetries} failed:`,
+        error instanceof Error ? error.message : String(error)
+      );
+    }
+
+    // If this was the last attempt and we still don't have a client, throw
+    if (attempt === maxRetries && !client) {
+      throw new Error(
+        `Failed to connect to Weaviate after ${maxRetries} attempts. ` +
+          'The gRPC server may not be ready yet. ' +
+          'This is a known issue on Node 20/22 with slower gRPC initialization.'
+      );
+    }
+
+    // Wait before the next retry (exponential backoff)
+    // Only wait if we're going to retry (not on the last attempt)
+    if (attempt < maxRetries && !client) {
+      const delay = initialDelay * attempt;
+      console.log(
+        `[Embedded Weaviate] Waiting ${delay}ms before retry attempt ${attempt + 1}/${maxRetries}...`
+      );
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+
+  // At this point, client is guaranteed to be defined (we throw if it's not)
+  if (!client) {
+    throw new Error('Unexpected: client is undefined after retry loop');
+  }
 
   console.log('[Embedded Weaviate] Connected successfully!');
 
