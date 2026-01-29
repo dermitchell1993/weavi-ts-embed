@@ -125,7 +125,37 @@ The `additionalEnvVars` option allows you to configure Weaviate using environmen
 - `QUERY_DEFAULTS_LIMIT` - Default query result limit (e.g., `'50'`)
 - `QUERY_MAXIMUM_RESULTS` - Maximum allowed results per query (e.g., `'10000'`)
 
-#### Example with Common Variables
+#### Basic Example
+
+```typescript
+import { connectToEmbedded } from 'weaviate-ts-embedded';
+
+// Simple configuration with common variables
+const client = await connectToEmbedded({
+  port: 8080,
+  additionalEnvVars: {
+    LOG_LEVEL: 'debug',
+    ENABLE_MODULES: 'text2vec-openai',
+  },
+});
+```
+
+**Important:** All environment variable values must be strings. TypeScript will enforce this:
+
+```typescript
+// ✅ Correct - values are strings
+additionalEnvVars: {
+  QUERY_DEFAULTS_LIMIT: '50',
+  LOG_LEVEL: 'debug',
+}
+
+// ❌ Won't compile - TypeScript error
+additionalEnvVars: {
+  QUERY_DEFAULTS_LIMIT: 50,  // Error: Type 'number' is not assignable to type 'string'
+}
+```
+
+#### Advanced Example with Authentication
 
 ```typescript
 import { connectToEmbedded } from 'weaviate-ts-embedded';

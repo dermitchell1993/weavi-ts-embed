@@ -164,7 +164,7 @@ describe('WeaviateProcess', () => {
       expect(spawnOptions?.env?.LOG_LEVEL).toBe('debug');
     });
 
-    it('should pass multiple common environment variables', async () => {
+    it('should pass multiple environment variables simultaneously', async () => {
       const configWithMultipleVars = {
         ...validConfig,
         additionalEnvVars: {
