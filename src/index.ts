@@ -11,3 +11,6 @@ export * from './port-utils';
 
 // Export process management utilities
 export * from './weaviate-process';
+
+// Export health check utilities
+export * from './health-check';
