@@ -256,6 +256,7 @@ See the [Examples README](./examples/README.md) for a complete overview.
 
 ### 📖 Official Documentation
 
+- **[API Documentation](./docs/api/index.html)** - Complete TypeDoc-generated API reference
 - [Weaviate Embedded Installation Guide](https://weaviate.io/developers/weaviate/installation/embedded)
 - [Weaviate TypeScript Client v3 Docs](https://weaviate.io/developers/weaviate/client-libraries/typescript)
 - [Weaviate Environment Variables Reference](https://weaviate.io/developers/weaviate/config-refs/env-vars)
