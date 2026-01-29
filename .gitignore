@@ -13,3 +13,6 @@ bin/
 .npmrc
 .eslintcache
 tools/docker-compose-embedded.yml
+
+# Generated API documentation (deployed via GitHub Pages)
+docs/api/
