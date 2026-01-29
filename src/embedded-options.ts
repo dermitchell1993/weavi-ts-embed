@@ -62,6 +62,14 @@ export interface EmbeddedOptions {
    * @example { apiKey: 'your-api-key' }
    */
   authCredentials?: AuthCredentials;
+
+  /**
+   * Maximum time to wait for Weaviate to become ready (in milliseconds).
+   * Increase this value if Weaviate takes longer to start on slower systems.
+   * @default 30000
+   * @example 60000
+   */
+  healthCheckTimeout?: number;
 }
 
 /**

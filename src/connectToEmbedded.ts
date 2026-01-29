@@ -45,6 +45,7 @@ export async function connectToEmbedded(options: EmbeddedOptions = {}): Promise<
     additionalEnvVars = {},
     headers,
     authCredentials,
+    healthCheckTimeout = 30000,
   } = options;
 
   // TODO [PRI-734]: Implement binary download manager with checksum verification
@@ -83,7 +84,7 @@ export async function connectToEmbedded(options: EmbeddedOptions = {}): Promise<
   });
 
   // PRI-738: Wait for Weaviate to be ready with health check
-  await waitForReady(port);
+  await waitForReady(port, { timeout: healthCheckTimeout });
 
   // Connect to the embedded instance using the official v3 client
   const client = await connectToLocal({
