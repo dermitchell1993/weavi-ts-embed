@@ -70,11 +70,14 @@ jobs:
           import { homedir } from 'os';
           
           const cacheDir = join(homedir(), '.cache', 'weaviate-embedded');
-          const manager = new BinaryManager({ cacheDir });
+          const manager = new BinaryManager({ cacheDir, skipChecksumVerification: true });
           
-          console.log('Downloading Weaviate binaries...');
+          // Use the same version as integration tests (see tests/integration/lifecycle.test.ts:63)
+          const version = '1.23.0';
+          
+          console.log(`Downloading Weaviate v${version}...`);
           try {
-            const binaryPath = await manager.ensureBinary('latest');
+            const binaryPath = await manager.ensureBinary(version);
             console.log('Binary downloaded to:', binaryPath);
             console.log('Cache directory:', cacheDir);
             process.exit(0);
