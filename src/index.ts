@@ -1,6 +1,7 @@
 // V3 API - Modern weaviate-client integration
 export { connectToEmbedded } from './connectToEmbedded';
-export type { EmbeddedOptions } from './connectToEmbedded';
+export type { EmbeddedOptions } from './embedded-options';
+export { validateOptions } from './embedded-options';
 
 // Re-export WeaviateClient from weaviate-client for convenience
 export type { WeaviateClient } from 'weaviate-client';
