@@ -20,6 +20,16 @@ import { mkdirSync, rmSync } from 'fs';
  * - Default values when env vars not set
  * - Invalid environment variable handling
  *
+ * Test Pattern Notes:
+ * - Tests verify behavior through process state (isRunning()) which is appropriate
+ *   for integration testing of process lifecycle management
+ * - Port availability is checked before tests that may conflict with system services
+ * - Edge case tests (min/max ports) gracefully skip when ports unavailable
+ * - Future enhancements could include:
+ *   * HTTP requests to health endpoint to verify actual port binding
+ *   * Verification of custom env vars via Weaviate's configuration API (if exposed)
+ *   * Capturing stdout/stderr to verify verbose logging output
+ *
  * Note: These tests require an actual Weaviate binary to be present and will
  * interact with real system resources (ports, processes, file system).
  */
@@ -463,6 +473,9 @@ describe('Environment Variable Configuration Tests', () => {
     });
 
     it('should handle verbose flag when explicitly set to true', async () => {
+      // Note: This test verifies that verbose mode doesn't break process startup
+      // Future enhancement: Could capture stdout/stderr to verify verbose logging
+      // by intercepting console.log calls or using a custom stream
       await weaviateProcess.start({
         binaryPath,
         port: TEST_PORT,
@@ -472,6 +485,8 @@ describe('Environment Variable Configuration Tests', () => {
       });
 
       expect(weaviateProcess.isRunning()).toBe(true);
+      // Future enhancement: Add assertion to verify verbose output was produced
+      // e.g., expect(capturedLogs).toContain('[WeaviateProcess] Starting Weaviate binary')
     });
   });
 
@@ -518,8 +533,9 @@ describe('Environment Variable Configuration Tests', () => {
       ).rejects.toThrow();
     });
 
-    it('should handle empty string data path gracefully', async () => {
-      // Empty string should be handled - likely defaults or creates in current directory
+    it('should handle empty string data path (resolves to cwd)', async () => {
+      // Empty string is resolved by join(process.cwd(), '') which results in process.cwd()
+      // This is the current implementation behavior - empty string defaults to current directory
       await weaviateProcess.start({
         binaryPath,
         port: TEST_PORT,
@@ -529,6 +545,9 @@ describe('Environment Variable Configuration Tests', () => {
       });
 
       expect(weaviateProcess.isRunning()).toBe(true);
+
+      // Note: This behavior is documented in WeaviateProcessConfig.persistenceDataPath
+      // Empty string will resolve to process.cwd() via join(process.cwd(), '')
     });
   });
 
@@ -537,43 +556,55 @@ describe('Environment Variable Configuration Tests', () => {
       // Port 1024 is the first non-privileged port
       const minPort = 1024;
 
-      try {
-        await checkPorts(minPort, TEST_GRPC_PORT);
+      // Check if port is available first
+      const portAvailable = await checkPorts(minPort, TEST_GRPC_PORT).then(
+        () => true,
+        () => false
+      );
 
-        await weaviateProcess.start({
-          binaryPath,
-          port: minPort,
-          grpcPort: TEST_GRPC_PORT,
-          persistenceDataPath: testDataDir,
-          verbose: false,
-        });
-
-        expect(weaviateProcess.isRunning()).toBe(true);
-      } catch (error) {
-        // Port may be in use or require privileges - acceptable in test environment
-        console.log(`Minimum port ${minPort} not available, skipping test`);
+      if (!portAvailable) {
+        console.log(`⚠️  Skipping minimum port test: port ${minPort} not available`);
+        // Using pending() would be ideal but Jest doesn't expose it in beforeEach/it context
+        // So we explicitly skip with a passing assertion noting the skip
+        expect(portAvailable).toBe(false); // Documents why test was skipped
+        return;
       }
+
+      await weaviateProcess.start({
+        binaryPath,
+        port: minPort,
+        grpcPort: TEST_GRPC_PORT,
+        persistenceDataPath: testDataDir,
+        verbose: false,
+      });
+
+      expect(weaviateProcess.isRunning()).toBe(true);
     });
 
     it('should handle high port numbers', async () => {
       const highPort = 65000; // Near maximum valid port
 
-      try {
-        await checkPorts(highPort, TEST_GRPC_PORT);
+      // Check if port is available first
+      const portAvailable = await checkPorts(highPort, TEST_GRPC_PORT).then(
+        () => true,
+        () => false
+      );
 
-        await weaviateProcess.start({
-          binaryPath,
-          port: highPort,
-          grpcPort: TEST_GRPC_PORT,
-          persistenceDataPath: testDataDir,
-          verbose: false,
-        });
-
-        expect(weaviateProcess.isRunning()).toBe(true);
-      } catch (error) {
-        // Port may be in use - acceptable in test environment
-        console.log(`High port ${highPort} not available, skipping test`);
+      if (!portAvailable) {
+        console.log(`⚠️  Skipping high port test: port ${highPort} not available`);
+        expect(portAvailable).toBe(false); // Documents why test was skipped
+        return;
       }
+
+      await weaviateProcess.start({
+        binaryPath,
+        port: highPort,
+        grpcPort: TEST_GRPC_PORT,
+        persistenceDataPath: testDataDir,
+        verbose: false,
+      });
+
+      expect(weaviateProcess.isRunning()).toBe(true);
     });
 
     it('should fail when HTTP and gRPC ports are the same', async () => {
