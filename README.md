@@ -99,10 +99,105 @@ main().catch(console.error);
 
 ---
 
+## Configuration Options
+
+### Environment Variables
+
+The `additionalEnvVars` option allows you to configure Weaviate using environment variables. Here are commonly used variables:
+
+#### Module Configuration
+- `ENABLE_MODULES` - Enable specific vectorizer modules (e.g., `'text2vec-openai,text2vec-cohere'`)
+- `DEFAULT_VECTORIZER_MODULE` - Set the default vectorizer (e.g., `'text2vec-openai'`)
+
+#### Logging
+- `LOG_LEVEL` - Set logging verbosity: `'debug'`, `'info'`, `'warn'`, or `'error'`
+- `LOG_FORMAT` - Log format: `'text'` or `'json'`
+
+#### Storage
+- `PERSISTENCE_DATA_PATH` - Data storage directory (can also be set via `persistenceDataPath` option)
+
+#### Authentication
+- `AUTHENTICATION_APIKEY_ENABLED` - Enable API key authentication: `'true'` or `'false'`
+- `AUTHENTICATION_APIKEY_ALLOWED_KEYS` - Comma-separated list of allowed API keys
+- `AUTHENTICATION_APIKEY_USERS` - Comma-separated list of usernames
+
+#### Performance
+- `QUERY_DEFAULTS_LIMIT` - Default query result limit (e.g., `'50'`)
+- `QUERY_MAXIMUM_RESULTS` - Maximum allowed results per query (e.g., `'10000'`)
+
+#### Basic Example
+
+```typescript
+import { connectToEmbedded } from 'weaviate-ts-embedded';
+
+// Simple configuration with common variables
+const client = await connectToEmbedded({
+  port: 8080,
+  additionalEnvVars: {
+    LOG_LEVEL: 'debug',
+    ENABLE_MODULES: 'text2vec-openai',
+  },
+});
+```
+
+**Important:** All environment variable values must be strings. TypeScript will enforce this:
+
+```typescript
+// ✅ Correct - values are strings
+additionalEnvVars: {
+  QUERY_DEFAULTS_LIMIT: '50',
+  LOG_LEVEL: 'debug',
+}
+
+// ❌ Won't compile - TypeScript error
+additionalEnvVars: {
+  QUERY_DEFAULTS_LIMIT: 50,  // Error: Type 'number' is not assignable to type 'string'
+}
+```
+
+#### Advanced Example with Authentication
+
+```typescript
+import { connectToEmbedded } from 'weaviate-ts-embedded';
+
+const client = await connectToEmbedded({
+  port: 8080,
+  additionalEnvVars: {
+    // Enable modules
+    ENABLE_MODULES: 'text2vec-openai,text2vec-cohere',
+    DEFAULT_VECTORIZER_MODULE: 'text2vec-openai',
+    
+    // Configure logging
+    LOG_LEVEL: 'debug',
+    LOG_FORMAT: 'json',
+    
+    // Enable authentication
+    AUTHENTICATION_APIKEY_ENABLED: 'true',
+    AUTHENTICATION_APIKEY_ALLOWED_KEYS: 'my-secret-key',
+    AUTHENTICATION_APIKEY_USERS: 'admin',
+    
+    // Performance tuning
+    QUERY_DEFAULTS_LIMIT: '50',
+    QUERY_MAXIMUM_RESULTS: '10000',
+  },
+  headers: {
+    'X-OpenAI-Api-Key': process.env.OPENAI_API_KEY,
+  },
+  authCredentials: {
+    apiKey: 'my-secret-key',
+  },
+});
+```
+
+For a complete list of environment variables, see the [Weaviate Configuration Documentation](https://weaviate.io/developers/weaviate/config-refs/env-vars).
+
+---
+
 ## 📚 Documentation
 
 - [Weaviate Embedded Installation Guide](https://weaviate.io/developers/weaviate/installation/embedded)
 - [Weaviate TypeScript Client v3 Docs](https://weaviate.io/developers/weaviate/client-libraries/typescript)
+- [Weaviate Environment Variables Reference](https://weaviate.io/developers/weaviate/config-refs/env-vars)
 
 ---
 
