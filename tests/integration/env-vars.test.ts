@@ -50,7 +50,8 @@ describe('Environment Variable Configuration Tests', () => {
 
   beforeAll(async () => {
     // Set up binary manager and ensure the Weaviate binary is available
-    binaryManager = new BinaryManager();
+    // Skip checksum verification as Weaviate releases use individual SHA256 files
+    binaryManager = new BinaryManager({ skipChecksumVerification: true });
 
     // Download/ensure Weaviate binary is available
     try {
