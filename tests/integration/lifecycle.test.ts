@@ -131,7 +131,7 @@ describe('WeaviateProcess Lifecycle Integration Tests', () => {
     it('should fail to start if ports are already in use', async () => {
       // Start first process
       await weaviateProcess.start({
-        binaryPath!,
+        binaryPath: binaryPath!,
         port: TEST_PORT,
         grpcPort: TEST_GRPC_PORT,
         persistenceDataPath: testDataDir,
@@ -158,7 +158,7 @@ describe('WeaviateProcess Lifecycle Integration Tests', () => {
 
     it('should prevent multiple start calls on the same instance', async () => {
       await weaviateProcess.start({
-        binaryPath!,
+        binaryPath: binaryPath!,
         port: TEST_PORT,
         grpcPort: TEST_GRPC_PORT,
         persistenceDataPath: testDataDir,
@@ -170,7 +170,7 @@ describe('WeaviateProcess Lifecycle Integration Tests', () => {
       // Try to start again without stopping
       await expect(
         weaviateProcess.start({
-          binaryPath!,
+          binaryPath: binaryPath!,
           port: TEST_PORT + 1,
           grpcPort: TEST_GRPC_PORT + 1,
           persistenceDataPath: testDataDir,
@@ -183,7 +183,7 @@ describe('WeaviateProcess Lifecycle Integration Tests', () => {
   describe('Stop Process Gracefully', () => {
     it('should stop the process gracefully with SIGTERM', async () => {
       await weaviateProcess.start({
-        binaryPath!,
+        binaryPath: binaryPath!,
         port: TEST_PORT,
         grpcPort: TEST_GRPC_PORT,
         persistenceDataPath: testDataDir,
@@ -218,7 +218,7 @@ describe('WeaviateProcess Lifecycle Integration Tests', () => {
 
     it('should handle multiple stop() calls gracefully', async () => {
       await weaviateProcess.start({
-        binaryPath!,
+        binaryPath: binaryPath!,
         port: TEST_PORT,
         grpcPort: TEST_GRPC_PORT,
         persistenceDataPath: testDataDir,
@@ -236,7 +236,7 @@ describe('WeaviateProcess Lifecycle Integration Tests', () => {
   describe('SIGTERM Handling', () => {
     it('should respond to SIGTERM and shutdown gracefully', async () => {
       await weaviateProcess.start({
-        binaryPath!,
+        binaryPath: binaryPath!,
         port: TEST_PORT,
         grpcPort: TEST_GRPC_PORT,
         persistenceDataPath: testDataDir,
@@ -265,7 +265,7 @@ describe('WeaviateProcess Lifecycle Integration Tests', () => {
   describe('SIGKILL Behavior', () => {
     it('should forcefully kill process if SIGTERM timeout is exceeded', async () => {
       await weaviateProcess.start({
-        binaryPath!,
+        binaryPath: binaryPath!,
         port: TEST_PORT,
         grpcPort: TEST_GRPC_PORT,
         persistenceDataPath: testDataDir,
@@ -294,7 +294,7 @@ describe('WeaviateProcess Lifecycle Integration Tests', () => {
   describe('Resource Cleanup Verification', () => {
     it('should clean up all resources after stopping', async () => {
       await weaviateProcess.start({
-        binaryPath!,
+        binaryPath: binaryPath!,
         port: TEST_PORT,
         grpcPort: TEST_GRPC_PORT,
         persistenceDataPath: testDataDir,
@@ -325,7 +325,7 @@ describe('WeaviateProcess Lifecycle Integration Tests', () => {
     it('should allow starting a new process after stopping', async () => {
       // First lifecycle
       await weaviateProcess.start({
-        binaryPath!,
+        binaryPath: binaryPath!,
         port: TEST_PORT,
         grpcPort: TEST_GRPC_PORT,
         persistenceDataPath: testDataDir,
@@ -337,7 +337,7 @@ describe('WeaviateProcess Lifecycle Integration Tests', () => {
 
       // Second lifecycle - should succeed
       await weaviateProcess.start({
-        binaryPath!,
+        binaryPath: binaryPath!,
         port: TEST_PORT,
         grpcPort: TEST_GRPC_PORT,
         persistenceDataPath: testDataDir,
@@ -356,7 +356,7 @@ describe('WeaviateProcess Lifecycle Integration Tests', () => {
     it('should support clean restart cycle', async () => {
       // Initial start
       await weaviateProcess.start({
-        binaryPath!,
+        binaryPath: binaryPath!,
         port: TEST_PORT,
         grpcPort: TEST_GRPC_PORT,
         persistenceDataPath: testDataDir,
@@ -371,7 +371,7 @@ describe('WeaviateProcess Lifecycle Integration Tests', () => {
 
       // Restart
       await weaviateProcess.start({
-        binaryPath!,
+        binaryPath: binaryPath!,
         port: TEST_PORT,
         grpcPort: TEST_GRPC_PORT,
         persistenceDataPath: testDataDir,
@@ -392,7 +392,7 @@ describe('WeaviateProcess Lifecycle Integration Tests', () => {
         // Start
         // eslint-disable-next-line no-await-in-loop
         await weaviateProcess.start({
-          binaryPath!,
+          binaryPath: binaryPath!,
           port: TEST_PORT,
           grpcPort: TEST_GRPC_PORT,
           persistenceDataPath: testDataDir,
@@ -428,7 +428,7 @@ describe('WeaviateProcess Lifecycle Integration Tests', () => {
       for (let i = 0; i < cycles; i++) {
         // eslint-disable-next-line no-await-in-loop
         await weaviateProcess.start({
-          binaryPath!,
+          binaryPath: binaryPath!,
           port: TEST_PORT,
           grpcPort: TEST_GRPC_PORT,
           persistenceDataPath: testDataDir,
