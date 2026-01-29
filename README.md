@@ -65,11 +65,11 @@ await client.close();
 
 ```typescript
 import { connectToEmbedded } from 'weaviate-ts-embedded';
-import { apiKey } from 'weaviate-client';
+import { ApiKey } from 'weaviate-client';
 
 // Using API key authentication
 const client = await connectToEmbedded({
-  authCredentials: apiKey('your-api-key'),
+  authCredentials: new ApiKey('your-api-key'),
   headers: {
     'X-OpenAI-Api-Key': process.env.OPENAI_API_KEY,
   },

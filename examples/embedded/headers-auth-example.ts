@@ -11,7 +11,7 @@
  */
 
 import { connectToEmbedded } from '../../src';
-import { apiKey } from 'weaviate-client';
+import { ApiKey } from 'weaviate-client';
 
 async function exampleWithHeaders() {
   console.log('=== Example 1: Using Custom Headers ===\n');
@@ -40,7 +40,7 @@ async function exampleWithAuthentication() {
   const client = await connectToEmbedded({
     port: 8081,
     grpcPort: 50052,
-    authCredentials: apiKey('your-weaviate-api-key'),
+    authCredentials: new ApiKey('your-weaviate-api-key'),
   });
 
   console.log('✅ Connected with API key authentication\n');
@@ -59,7 +59,7 @@ async function exampleWithBothHeadersAndAuth() {
       'X-OpenAI-Api-Key': process.env.OPENAI_API_KEY || 'sk-...',
       'X-Cohere-Api-Key': process.env.COHERE_API_KEY || 'cohere-key',
     },
-    authCredentials: apiKey('your-weaviate-api-key'),
+    authCredentials: new ApiKey('your-weaviate-api-key'),
     additionalEnvVars: {
       ENABLE_MODULES: 'text2vec-openai,text2vec-cohere',
     },
