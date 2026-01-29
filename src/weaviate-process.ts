@@ -119,7 +119,7 @@ export class WeaviateProcess {
     const env = {
       ...process.env,
       WEAVIATE_PORT: config.port.toString(),
-      WEAVIATE_GRPC_PORT: config.grpcPort.toString(),
+      GRPC_PORT: config.grpcPort.toString(),
       PERSISTENCE_DATA_PATH: resolvedDataPath,
       ...config.additionalEnvVars,
     };

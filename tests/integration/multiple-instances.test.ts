@@ -256,7 +256,7 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
       expect(instance2.isRunning()).toBe(true);
     });
 
-    it('should fail when trying to start instance with already-used ports', async () => {
+    it('should fail when trying to start instance with already-used HTTP port', async () => {
       const instance1 = new WeaviateProcess();
       const instance2 = new WeaviateProcess();
       instances.push(instance1, instance2);
@@ -280,25 +280,25 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
       expect(instance1.isRunning()).toBe(true);
 
       // Wait for the first instance to fully bind to ports
-      console.log(`Waiting 5 seconds for first instance to bind to ports ${port} and ${grpcPort}`);
+      console.log(`Waiting 5 seconds for first instance to bind to HTTP port ${port}`);
       await new Promise((resolve) => setTimeout(resolve, 5000));
 
-      // Check if ports are now in use
-      console.log(`Checking if ports ${port} and ${grpcPort} are now in use`);
+      // Check if HTTP port is now in use
+      console.log(`Checking if HTTP port ${port} is now in use`);
       try {
         await checkPorts(port, grpcPort);
-        console.log(`ERROR: checkPorts did not detect that ports ${port} and ${grpcPort} are in use!`);
+        console.log(`ERROR: checkPorts did not detect that HTTP port ${port} is in use!`);
       } catch (error) {
-        console.log(`GOOD: checkPorts correctly detected ports are in use: ${error}`);
+        console.log(`GOOD: checkPorts correctly detected HTTP port is in use: ${error}`);
       }
 
-      // Try to start second instance with same ports - should fail
-      console.log(`Attempting to start second instance with same ports - this should fail`);
+      // Try to start second instance with same HTTP port - should fail
+      console.log(`Attempting to start second instance with same HTTP port - this should fail`);
       await expect(
         instance2.start({
           binaryPath,
           port, // Same HTTP port - conflict!
-          grpcPort,
+          grpcPort, // Same gRPC port (hardcoded in Weaviate)
           persistenceDataPath: createTestDataDir(),
           additionalEnvVars: {
             CLUSTER_GOSSIP_BIND_PORT: (BASE_CLUSTER_PORT + 1).toString(),
