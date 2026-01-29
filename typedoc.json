@@ -1,0 +1,17 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src/index.ts"],
+  "out": "docs/api",
+  "plugin": [],
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "excludeExternals": true,
+  "readme": "README.md",
+  "name": "Weaviate TypeScript Embedded Client",
+  "includeVersion": true,
+  "sort": ["source-order"],
+  "hideGenerator": false,
+  "githubPages": false,
+  "disableSources": false
+}
+

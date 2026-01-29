@@ -9,15 +9,87 @@ import Unzipper from 'adm-zip';
 
 const DEFAULT_CACHE_DIR = join(homedir(), '.cache/weaviate-embedded');
 
+/**
+ * Configuration options for the BinaryManager.
+ *
+ * @example
+ * ```typescript
+ * const manager = new BinaryManager({
+ *   cacheDir: '/custom/cache/path',
+ *   skipChecksumVerification: false
+ * });
+ * ```
+ */
 export interface BinaryManagerOptions {
+  /**
+   * Directory path where Weaviate binaries will be cached.
+   *
+   * **Default behavior:** Uses `XDG_CACHE_HOME` environment variable if set,
+   * otherwise falls back to `~/.cache/weaviate-embedded`
+   *
+   * @default process.env.XDG_CACHE_HOME || '~/.cache/weaviate-embedded'
+   * @example '/usr/local/cache/weaviate'
+   */
   cacheDir?: string;
+
+  /**
+   * Skip SHA256 checksum verification when downloading binaries.
+   *
+   * **Security Warning:** Disabling checksum verification removes protection
+   * against corrupted downloads and potential security threats. Only disable
+   * for trusted custom binary URLs.
+   *
+   * @default false
+   */
   skipChecksumVerification?: boolean;
 }
 
+/**
+ * Manages downloading, caching, and verification of Weaviate binaries.
+ *
+ * The BinaryManager handles the complete lifecycle of Weaviate binary management:
+ * - Platform and architecture detection
+ * - Binary downloading from GitHub releases
+ * - SHA256 checksum verification for security
+ * - Binary caching to avoid redundant downloads
+ * - Archive extraction (tar.gz and zip formats)
+ *
+ * @example
+ * ```typescript
+ * const manager = new BinaryManager({
+ *   cacheDir: './weaviate-cache',
+ *   skipChecksumVerification: false
+ * });
+ *
+ * const binaryPath = await manager.ensureBinary('1.27.0');
+ * console.log(`Binary ready at: ${binaryPath}`);
+ * ```
+ */
 export class BinaryManager {
   private readonly cacheDir: string;
   private readonly skipChecksumVerification: boolean;
 
+  /**
+   * Create a new BinaryManager instance.
+   *
+   * @param options Configuration options for binary management
+   *
+   * @example
+   * ```typescript
+   * // Use defaults (recommended)
+   * const manager = new BinaryManager();
+   *
+   * // Custom cache directory
+   * const manager = new BinaryManager({
+   *   cacheDir: '/opt/weaviate-cache'
+   * });
+   *
+   * // Skip checksum verification (not recommended for production)
+   * const manager = new BinaryManager({
+   *   skipChecksumVerification: true
+   * });
+   * ```
+   */
   constructor(options: BinaryManagerOptions = {}) {
     this.cacheDir = options.cacheDir || process.env.XDG_CACHE_HOME || DEFAULT_CACHE_DIR;
     this.skipChecksumVerification = options.skipChecksumVerification || false;
@@ -25,10 +97,38 @@ export class BinaryManager {
 
   /**
    * Ensures the binary exists for the specified version or URL.
-   * Downloads and verifies if necessary.
-   * @param version - Weaviate version (e.g., '1.23.0' or 'latest')
-   * @param binaryUrl - Optional custom binary URL (overrides version)
-   * @returns Path to the binary
+   *
+   * This method will:
+   * 1. Check if the binary already exists in the cache
+   * 2. Download the binary if not cached
+   * 3. Verify SHA256 checksum (unless disabled or using custom URL)
+   * 4. Extract the binary from the archive
+   * 5. Make the binary executable
+   *
+   * @param version Weaviate version (e.g., '1.27.0' or 'latest')
+   * @param binaryUrl Optional custom binary URL (overrides version-based URL)
+   * @returns Promise resolving to the absolute path of the binary
+   * @throws Error if download fails
+   * @throws Error if checksum verification fails
+   * @throws Error if extraction fails
+   *
+   * @example
+   * ```typescript
+   * const manager = new BinaryManager();
+   *
+   * // Download specific version
+   * const path = await manager.ensureBinary('1.27.0');
+   * console.log(`Binary at: ${path}`);
+   *
+   * // Use latest version
+   * const latestPath = await manager.ensureBinary('latest');
+   *
+   * // Use custom binary URL
+   * const customPath = await manager.ensureBinary(
+   *   '1.27.0',
+   *   'https://example.com/custom-weaviate-binary.tar.gz'
+   * );
+   * ```
    */
   async ensureBinary(version: string, binaryUrl?: string): Promise<string> {
     const binaryPath = this.getBinaryPath(version, binaryUrl);
