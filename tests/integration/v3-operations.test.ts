@@ -39,7 +39,9 @@ describe('Weaviate V3 Operations Integration Tests', () => {
   const TEST_GRPC_PORT = parseInt(process.env.TEST_V3_GRPC_PORT || '51053', 10);
 
   // Increase timeout for integration tests as they involve real process operations
-  jest.setTimeout(60000);
+  // Need 120s to accommodate: binary download (30s) + process startup (20s) + health check (60s) + buffer (10s)
+  // Node 20/22 require more time than Node 18 for these operations
+  jest.setTimeout(120000);
 
   beforeAll(async () => {
     // Create a unique test data directory
