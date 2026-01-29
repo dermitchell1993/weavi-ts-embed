@@ -103,30 +103,26 @@ export async function connectToEmbedded(options: EmbeddedOptions = {}): Promise<
   console.log(`[Embedded Weaviate] Data Path: ${persistenceDataPath || '(temporary)'}`);
   console.log(`[Embedded Weaviate] Additional Env Vars: ${Object.keys(additionalEnvVars).length} variables`);
 
-  // STUB: In future PRs, this will:
-  // 1. Check if binary exists at binaryPath or download it (PRI-734)
-  // 2. Detect platform and select correct binary (PRI-735)
-  // 3. Spawn Weaviate process with environment variables (PRI-737)
-  // 4. Wait for health check to pass (PRI-738)
-  // 5. Handle port conflicts gracefully (PRI-739)
-
-  console.log('[Embedded Weaviate] STUB: Binary lifecycle not yet implemented');
-  console.log('[Embedded Weaviate] Assuming Weaviate is already running on specified ports...');
+  // Binary lifecycle management:
+  // ✅ Binary download and management (PRI-734, PRI-735)
+  // ✅ Process spawning with environment variables (PRI-737)
+  // ✅ Shutdown lifecycle and resource cleanup (PRI-740)
+  // TODO: Health check with retry logic (PRI-738)
+  // TODO: Port conflict detection (PRI-739)
 
   // Initialize WeaviateProcess for lifecycle management
-  // This will be fully integrated when PRI-737 (Process Spawning) is complete
   const weaviateProcess = new WeaviateProcess();
 
-  // TODO [PRI-737]: Uncomment when process spawning is implemented
-  // const binaryManager = new BinaryManager();
-  // const resolvedBinaryPath = binaryPath || await binaryManager.ensureBinary(version);
-  // await weaviateProcess.start({
-  //   binaryPath: resolvedBinaryPath,
-  //   port,
-  //   grpcPort,
-  //   persistenceDataPath,
-  //   additionalEnvVars,
-  // });
+  // PRI-737: Process spawning with binary management
+  const binaryManager = new BinaryManager();
+  const resolvedBinaryPath = binaryPath || (await binaryManager.ensureBinary(version));
+  await weaviateProcess.start({
+    binaryPath: resolvedBinaryPath,
+    port,
+    grpcPort,
+    persistenceDataPath,
+    additionalEnvVars,
+  });
 
   // TODO [PRI-738]: Uncomment when health check is implemented
   // await waitForReady(port, grpcPort);
