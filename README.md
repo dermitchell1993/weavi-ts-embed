@@ -9,7 +9,7 @@ npm install weaviate-ts-embedded weaviate-client
 ```
 
 **Requirements:**
-- Node.js >= 18.0.0
+- Node.js >= 18.0.0 (Node 20 or 22 recommended for best performance - [see performance guide](./docs/testing/ci-testing.md#nodejs-version-support))
 - weaviate-client v3.11.0 or higher (installed as dependency)
 
 ## Quick Start

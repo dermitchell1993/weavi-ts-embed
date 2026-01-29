@@ -1,0 +1,248 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - feature/**
+
+jobs:
+  # Job 1: Lint & Type Check (fast feedback)
+  lint-and-typecheck:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Check code formatting
+        run: npm run format:check
+
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+
+  # Job 2: Setup Weaviate Binaries (platform-specific)
+  setup-binaries:
+    name: Setup Weaviate Binaries (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    needs: lint-and-typecheck
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build TypeScript
+        run: npm run build
+
+      - name: Download Weaviate binary for ${{ matrix.os }}
+        run: |
+          cat > download-binary.mjs << 'EOF'
+          import { BinaryManager } from './dist/index.js';
+          import { join } from 'path';
+          import { homedir } from 'os';
+          
+          const cacheDir = join(homedir(), '.cache', 'weaviate-embedded');
+          const manager = new BinaryManager({ cacheDir, skipChecksumVerification: true });
+          
+          // Use the same version as integration tests
+          const version = '1.23.0';
+          
+          console.log(`Downloading Weaviate v${version} for ${process.platform}...`);
+          try {
+            const binaryPath = await manager.ensureBinary(version);
+            console.log('Binary downloaded to:', binaryPath);
+            console.log('Platform:', process.platform);
+            console.log('Cache directory:', cacheDir);
+            process.exit(0);
+          } catch (err) {
+            console.error('Failed to download binary:', err);
+            process.exit(1);
+          }
+          EOF
+          node download-binary.mjs
+
+      - name: Upload Weaviate binaries as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: weaviate-binaries-${{ matrix.os }}
+          path: ~/.cache/weaviate-embedded/
+          retention-days: 1
+          if-no-files-found: error
+
+  # Job 3: Unit Tests (Node 18, 20, 22)
+  unit-tests:
+    name: Unit Tests (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: lint-and-typecheck
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [18, 20, 22]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests only (exclude integration)
+        run: npx jest --testPathIgnorePatterns=integration
+
+      - name: Upload test coverage
+        if: matrix.node-version == 18
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-coverage
+          path: coverage/
+          if-no-files-found: ignore
+
+  # Job 4: Integration Tests (macOS & Linux)
+  # Note: Node 18 integration tests are skipped on PRs (run only on main branch)
+  # because Node 18 is 3-4x slower due to V8 engine performance; this saves ~4min per PR
+  integration-tests:
+    name: Integration Tests (${{ matrix.os }}, Node ${{ matrix.node-version }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    needs: setup-binaries
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node-version: [18, 20, 22]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Download platform-specific Weaviate binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: weaviate-binaries-${{ matrix.os }}
+          path: ~/.cache/weaviate-embedded/
+
+      - name: Make binaries executable
+        run: |
+          find ~/.cache/weaviate-embedded -type f -name "weaviate*" -exec chmod +x {} \;
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run integration tests only
+        # Skip Node 18 on PRs (only run on push to main/branches) - saves ~4min per PR
+        if: matrix.node-version != 18 || github.event_name == 'push'
+        run: npx jest tests/integration --maxWorkers=3 --verbose
+        env:
+          CI: true
+          NODE_OPTIONS: '--max-old-space-size=4096'
+
+  # Job 5: Build (compile TypeScript)
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [unit-tests, integration-tests]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build TypeScript
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: dist/
+          retention-days: 7
+
+  # Job 6: Publish (npm on release tags)
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: build
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build package
+        run: npm run build
+
+      - name: Publish to npm
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTOMATION_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/**
