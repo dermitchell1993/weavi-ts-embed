@@ -89,8 +89,8 @@ describe('WeaviateProcess', () => {
       const expectedPath = require('path').join(process.cwd(), './data/weaviate');
 
       expect(spawnOptions?.env).toMatchObject({
-        WEAVIATE_PORT: '8080',
-        WEAVIATE_GRPC_PORT: '50051',
+        PORT: '8080',
+        GRPC_PORT: '50051',
         PERSISTENCE_DATA_PATH: expectedPath,
         ENABLE_MODULES: 'text2vec-transformers',
       });
@@ -125,8 +125,8 @@ describe('WeaviateProcess', () => {
       // Should include both process.env and additional vars
       expect(spawnOptions?.env).toMatchObject({
         ...process.env,
-        WEAVIATE_PORT: '8080',
-        WEAVIATE_GRPC_PORT: '50051',
+        PORT: '8080',
+        GRPC_PORT: '50051',
         PERSISTENCE_DATA_PATH: expectedPath,
         ENABLE_MODULES: 'text2vec-transformers',
       });
