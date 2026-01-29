@@ -10,15 +10,16 @@
  * - Supports concurrent operations on different instances
  *
  * Port Number Ranges Used:
- * - Instance 1: HTTP 20080, gRPC 52051
- * - Instance 2: HTTP 20081, gRPC 52052
- * - Instance 3: HTTP 20082, gRPC 52053
- * - Instance 4: HTTP 20083, gRPC 52054
+ * - Instance 1: HTTP 20080, gRPC 52051, Cluster 8800
+ * - Instance 2: HTTP 20081, gRPC 52052, Cluster 8801
+ * - Instance 3: HTTP 20082, gRPC 52053, Cluster 8802
+ * - Instance 4: HTTP 20083, gRPC 52054, Cluster 8803
  *
  * Note: These port ranges are chosen to avoid conflicts with:
  * - Other integration test suites (lifecycle uses 19080, port-conflicts uses 18080)
  * - Common development services
  * - System reserved ports
+ * - Weaviate's default cluster port (7946)
  */
 
 import { WeaviateProcess } from '../../src/weaviate-process';
@@ -37,6 +38,7 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
   // Base port ranges for multiple instances
   const BASE_HTTP_PORT = 20080;
   const BASE_GRPC_PORT = 52051;
+  const BASE_CLUSTER_PORT = 8800; // Unique cluster ports to avoid conflicts
 
   // Increase timeout for integration tests
   jest.setTimeout(60000);
@@ -118,6 +120,7 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
 
     const httpPort = BASE_HTTP_PORT + instanceNumber;
     const grpcPort = BASE_GRPC_PORT + instanceNumber;
+    const clusterPort = BASE_CLUSTER_PORT + instanceNumber;
     const dataDir = createTestDataDir();
 
     await instance.start({
@@ -125,6 +128,9 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
       port: httpPort,
       grpcPort,
       persistenceDataPath: dataDir,
+      additionalEnvVars: {
+        CLUSTER_GOSSIP_BIND_PORT: clusterPort.toString(),
+      },
       verbose: false,
     });
 
@@ -215,6 +221,9 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
         port: port1,
         grpcPort: grpcPort1,
         persistenceDataPath: createTestDataDir(),
+        additionalEnvVars: {
+          CLUSTER_GOSSIP_BIND_PORT: (BASE_CLUSTER_PORT).toString(),
+        },
         verbose: false,
       });
 
@@ -223,6 +232,9 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
         port: port2,
         grpcPort: grpcPort2,
         persistenceDataPath: createTestDataDir(),
+        additionalEnvVars: {
+          CLUSTER_GOSSIP_BIND_PORT: (BASE_CLUSTER_PORT + 1).toString(),
+        },
         verbose: false,
       });
 
@@ -244,6 +256,9 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
         port,
         grpcPort,
         persistenceDataPath: createTestDataDir(),
+        additionalEnvVars: {
+          CLUSTER_GOSSIP_BIND_PORT: BASE_CLUSTER_PORT.toString(),
+        },
         verbose: false,
       });
 
@@ -496,6 +511,7 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
         grpcPort: BASE_GRPC_PORT,
         persistenceDataPath: createTestDataDir(),
         additionalEnvVars: {
+          CLUSTER_GOSSIP_BIND_PORT: BASE_CLUSTER_PORT.toString(),
           CUSTOM_VAR_1: 'value1',
         },
         verbose: false,
@@ -507,6 +523,7 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
         grpcPort: BASE_GRPC_PORT + 1,
         persistenceDataPath: createTestDataDir(),
         additionalEnvVars: {
+          CLUSTER_GOSSIP_BIND_PORT: (BASE_CLUSTER_PORT + 1).toString(),
           CUSTOM_VAR_2: 'value2',
         },
         verbose: false,
@@ -526,6 +543,9 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
         port: BASE_HTTP_PORT,
         grpcPort: BASE_GRPC_PORT,
         persistenceDataPath: createTestDataDir(),
+        additionalEnvVars: {
+          CLUSTER_GOSSIP_BIND_PORT: BASE_CLUSTER_PORT.toString(),
+        },
         verbose: true,
       });
 
@@ -534,6 +554,9 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
         port: BASE_HTTP_PORT + 1,
         grpcPort: BASE_GRPC_PORT + 1,
         persistenceDataPath: createTestDataDir(),
+        additionalEnvVars: {
+          CLUSTER_GOSSIP_BIND_PORT: (BASE_CLUSTER_PORT + 1).toString(),
+        },
         verbose: false,
       });
 
@@ -568,6 +591,9 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
       await instance.start({
         ...config,
         persistenceDataPath: createTestDataDir(),
+        additionalEnvVars: {
+          CLUSTER_GOSSIP_BIND_PORT: BASE_CLUSTER_PORT.toString(),
+        },
       });
       expect(instance.isRunning()).toBe(true);
     });
@@ -693,6 +719,9 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
             port: BASE_HTTP_PORT,
             grpcPort: BASE_GRPC_PORT,
             persistenceDataPath: dataDir1,
+            additionalEnvVars: {
+              CLUSTER_GOSSIP_BIND_PORT: BASE_CLUSTER_PORT.toString(),
+            },
             verbose: false,
           }),
           instance2.start({
@@ -700,6 +729,9 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
             port: BASE_HTTP_PORT + 1,
             grpcPort: BASE_GRPC_PORT + 1,
             persistenceDataPath: dataDir2,
+            additionalEnvVars: {
+              CLUSTER_GOSSIP_BIND_PORT: (BASE_CLUSTER_PORT + 1).toString(),
+            },
             verbose: false,
           }),
         ]);
