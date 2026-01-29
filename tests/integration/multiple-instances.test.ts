@@ -129,17 +129,18 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
       grpcPort,
       persistenceDataPath: dataDir,
       additionalEnvVars: {
-        // Disable clustering for isolated test instances
+        // Disable all clustering for isolated test instances
         RAFT_BOOTSTRAP_EXPECT: '1',
-        // Set unique cluster ports to avoid conflicts
+        DISABLE_MEMBERLIST: 'true',
+        // Disable raft entirely
+        DISABLERAFT: 'true',
+        // Set unique cluster ports to avoid conflicts (if raft is not disabled)
         RAFT_PORT: (8300 + instanceNumber).toString(),
         RAFT_INTERNAL_RPC_PORT: (8301 + instanceNumber).toString(),
         // Set unique memberlist ports
         CLUSTER_GOSSIP_BIND_PORT: clusterPort.toString(),
         CLUSTER_GOSSIP_ADVERTISE_PORT: clusterPort.toString(),
         CLUSTER_DATA_BIND_PORT: (7947 + instanceNumber).toString(),
-        // Disable memberlist to prevent clustering
-        DISABLE_MEMBERLIST: 'true',
       },
       verbose: false,
     });
@@ -278,7 +279,7 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
       expect(instance1.isRunning()).toBe(true);
 
       // Wait for the first instance to fully bind to ports
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      await new Promise((resolve) => setTimeout(resolve, 5000));
 
       // Try to start second instance with same ports - should fail
       await expect(
