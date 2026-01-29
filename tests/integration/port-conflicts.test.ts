@@ -7,6 +7,18 @@
  * - Respects custom port configurations (WEAVIATE_PORT, WEAVIATE_GRPC_PORT)
  * - Provides clear error messages for port conflicts
  * - Properly cleans up ports after process termination
+ *
+ * Port Number Ranges Used:
+ * - HTTP ports: 18080-18099 (20 unique ports)
+ * - gRPC ports: 15051-15067 (17 unique ports)
+ * - Custom HTTP ports: 19090-19091 (for custom port config tests)
+ * - Custom gRPC ports: 55051-55052 (for custom gRPC config tests)
+ * - High port range: 60000-60001 (for boundary condition tests)
+ *
+ * Note: These port ranges are chosen to avoid conflicts with:
+ * - Other integration test suites (e.g., lifecycle tests use 19080, 51051)
+ * - Common development services
+ * - System reserved ports
  */
 
 import { createServer, Server } from 'net';
@@ -56,6 +68,10 @@ describe('Port Conflict Integration Tests', () => {
     // Clean up all occupied servers
     await Promise.all(occupiedServers.map(freePort));
     occupiedServers = [];
+
+    // Small delay to ensure complete port release at OS level
+    // This prevents potential "address already in use" errors in subsequent tests
+    await new Promise((resolve) => setTimeout(resolve, 100));
   });
 
   describe('Port Availability Checking Before Startup', () => {
@@ -141,6 +157,30 @@ describe('Port Conflict Integration Tests', () => {
           binaryPath: '/nonexistent/path', // Won't get far enough to matter
         })
       ).rejects.toThrow(/Ports already in use/);
+    });
+
+    it('should detect port conflicts without side effects (mocked)', async () => {
+      const testPort = 18099;
+      const testGrpcPort = 15067;
+
+      // Occupy ports to simulate conflict
+      await occupyPort(testPort);
+      await occupyPort(testGrpcPort);
+
+      // Use checkPorts directly instead of connectToEmbedded to avoid side effects
+      // This ensures we're testing the port checking logic in isolation
+      await expect(checkPorts(testPort, testGrpcPort)).rejects.toThrow(/Ports already in use/);
+
+      // Verify the error message provides actionable information
+      try {
+        await checkPorts(testPort, testGrpcPort);
+        fail('Expected checkPorts to throw an error');
+      } catch (error: any) {
+        expect(error.message).toContain('HTTP port');
+        expect(error.message).toContain('gRPC port');
+        expect(error.message).toContain(testPort.toString());
+        expect(error.message).toContain(testGrpcPort.toString());
+      }
     });
 
     it('should allow multiple instances with different port configurations', async () => {
