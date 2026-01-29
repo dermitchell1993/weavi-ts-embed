@@ -40,7 +40,68 @@ jobs:
       - name: TypeScript type check
         run: npx tsc --noEmit
 
-  # Job 2: Unit Tests (Node 18, 20, 22)
+  # Job 2: Setup Weaviate Binaries (platform-specific)
+  setup-binaries:
+    name: Setup Weaviate Binaries (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    needs: lint-and-typecheck
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build TypeScript
+        run: npm run build
+
+      - name: Download Weaviate binary for ${{ matrix.os }}
+        run: |
+          cat > download-binary.mjs << 'EOF'
+          import { BinaryManager } from './dist/index.js';
+          import { join } from 'path';
+          import { homedir } from 'os';
+          
+          const cacheDir = join(homedir(), '.cache', 'weaviate-embedded');
+          const manager = new BinaryManager({ cacheDir, skipChecksumVerification: true });
+          
+          // Use the same version as integration tests
+          const version = '1.23.0';
+          
+          console.log(`Downloading Weaviate v${version} for ${process.platform}...`);
+          try {
+            const binaryPath = await manager.ensureBinary(version);
+            console.log('Binary downloaded to:', binaryPath);
+            console.log('Platform:', process.platform);
+            console.log('Cache directory:', cacheDir);
+            process.exit(0);
+          } catch (err) {
+            console.error('Failed to download binary:', err);
+            process.exit(1);
+          }
+          EOF
+          node download-binary.mjs
+
+      - name: Upload Weaviate binaries as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: weaviate-binaries-${{ matrix.os }}
+          path: ~/.cache/weaviate-embedded/
+          retention-days: 1
+          if-no-files-found: error
+
+  # Job 3: Unit Tests (Node 18, 20, 22)
   unit-tests:
     name: Unit Tests (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
@@ -74,12 +135,12 @@ jobs:
           path: coverage/
           if-no-files-found: ignore
 
-  # Job 3: Integration Tests (macOS & Linux)
+  # Job 4: Integration Tests (macOS & Linux)
   integration-tests:
     name: Integration Tests (${{ matrix.os }}, Node ${{ matrix.node-version }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
-    needs: lint-and-typecheck
+    needs: setup-binaries
     strategy:
       fail-fast: false
       matrix:
@@ -95,6 +156,16 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
 
+      - name: Download platform-specific Weaviate binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: weaviate-binaries-${{ matrix.os }}
+          path: ~/.cache/weaviate-embedded/
+
+      - name: Make binaries executable
+        run: |
+          find ~/.cache/weaviate-embedded -type f -name "weaviate*" -exec chmod +x {} \;
+
       - name: Install dependencies
         run: npm ci
 
@@ -104,7 +175,7 @@ jobs:
           CI: true
           NODE_OPTIONS: '--max-old-space-size=4096'
 
-  # Job 4: Build (compile TypeScript)
+  # Job 5: Build (compile TypeScript)
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -133,7 +204,7 @@ jobs:
           path: dist/
           retention-days: 7
 
-  # Job 5: Publish (npm on release tags)
+  # Job 6: Publish (npm on release tags)
   publish:
     name: Publish to npm
     runs-on: ubuntu-latest
