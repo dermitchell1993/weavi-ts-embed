@@ -54,6 +54,9 @@ describe('Weaviate V3 Operations Integration Tests', () => {
         grpcPort: TEST_GRPC_PORT,
         version: '1.23.0', // Use a stable version for testing
         persistenceDataPath: testDataDir,
+        additionalEnvVars: {
+          AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true',
+        },
       });
       console.log('[V3 Operations Test] Connected successfully!');
     } catch (error) {
