@@ -54,8 +54,9 @@ describe('Environment Variable Configuration Tests', () => {
     binaryManager = new BinaryManager({ skipChecksumVerification: true });
 
     // Download/ensure Weaviate binary is available
+    // Using v1.27.0 (stable, well-tested version with available checksums)
     try {
-      binaryPath = await binaryManager.ensureBinary('1.23.0');
+      binaryPath = await binaryManager.ensureBinary('1.27.0');
       console.log(`Using Weaviate binary at: ${binaryPath}`);
     } catch (error) {
       console.error('Failed to download Weaviate binary:', error);
@@ -95,11 +96,13 @@ describe('Environment Variable Configuration Tests', () => {
       }
     }
 
-    // Clean up test data directory
-    try {
-      rmSync(testDataDir, { recursive: true, force: true });
-    } catch (error) {
-      console.error('Error cleaning up test data directory:', error);
+    // Clean up test data directory (only if it was created)
+    if (testDataDir) {
+      try {
+        rmSync(testDataDir, { recursive: true, force: true });
+      } catch (error) {
+        console.error('Error cleaning up test data directory:', error);
+      }
     }
   });
 
