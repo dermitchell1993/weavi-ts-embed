@@ -19,8 +19,8 @@
     "prepack": "npm run build",
     "lint": "eslint --ext .ts,.js .",
     "lint:fix": "npm run lint -- --fix",
-    "format": "prettier --write --no-error-on-unmatched-pattern '**/*.{ts,js}' '!dist/**'",
-    "format:check": "prettier --check --no-error-on-unmatched-pattern '**/*.{ts,js}' '!dist/**'",
+    "format": "prettier --write --no-error-on-unmatched-pattern '**/*.{ts,js}' '!dist/**' '!docs/**'",
+    "format:check": "prettier --check --no-error-on-unmatched-pattern '**/*.{ts,js}' '!dist/**' '!docs/**'",
     "docs": "typedoc",
     "prepare": "husky install"
   },
