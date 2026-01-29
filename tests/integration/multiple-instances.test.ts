@@ -135,8 +135,8 @@ describe('Multiple Weaviate Instances Integration Tests', () => {
         // Disable raft entirely
         DISABLERAFT: 'true',
         // Set unique cluster ports to avoid conflicts (if raft is not disabled)
-        RAFT_PORT: (8300 + instanceNumber).toString(),
-        RAFT_INTERNAL_RPC_PORT: (8301 + instanceNumber).toString(),
+        RAFT_PORT: (8300 + instanceNumber * 2).toString(),
+        RAFT_INTERNAL_RPC_PORT: (8301 + instanceNumber * 2).toString(),
         // Set unique memberlist ports
         CLUSTER_GOSSIP_BIND_PORT: clusterPort.toString(),
         CLUSTER_GOSSIP_ADVERTISE_PORT: clusterPort.toString(),
