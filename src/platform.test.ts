@@ -1,3 +1,4 @@
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { detectPlatform, getBinaryFilename, Platform } from './platform';
 
 describe('Platform Detection', () => {
@@ -6,15 +7,35 @@ describe('Platform Detection', () => {
   const originalArch = process.arch;
 
   afterEach(() => {
-    // Restore original values
-    Object.defineProperty(process, 'platform', { value: originalPlatform });
-    Object.defineProperty(process, 'arch', { value: originalArch });
+    // Restore original values with proper configurable flag
+    Object.defineProperty(process, 'platform', {
+      value: originalPlatform,
+      writable: false,
+      enumerable: true,
+      configurable: true,
+    });
+    Object.defineProperty(process, 'arch', {
+      value: originalArch,
+      writable: false,
+      enumerable: true,
+      configurable: true,
+    });
   });
 
   describe('detectPlatform()', () => {
     it('should detect macOS arm64', () => {
-      Object.defineProperty(process, 'platform', { value: 'darwin' });
-      Object.defineProperty(process, 'arch', { value: 'arm64' });
+      Object.defineProperty(process, 'platform', {
+        value: 'darwin',
+        writable: false,
+        enumerable: true,
+        configurable: true,
+      });
+      Object.defineProperty(process, 'arch', {
+        value: 'arm64',
+        writable: false,
+        enumerable: true,
+        configurable: true,
+      });
 
       const platform = detectPlatform();
 
@@ -22,8 +43,18 @@ describe('Platform Detection', () => {
     });
 
     it('should detect macOS x64', () => {
-      Object.defineProperty(process, 'platform', { value: 'darwin' });
-      Object.defineProperty(process, 'arch', { value: 'x64' });
+      Object.defineProperty(process, 'platform', {
+        value: 'darwin',
+        writable: false,
+        enumerable: true,
+        configurable: true,
+      });
+      Object.defineProperty(process, 'arch', {
+        value: 'x64',
+        writable: false,
+        enumerable: true,
+        configurable: true,
+      });
 
       const platform = detectPlatform();
 
@@ -31,8 +62,18 @@ describe('Platform Detection', () => {
     });
 
     it('should detect Linux arm64', () => {
-      Object.defineProperty(process, 'platform', { value: 'linux' });
-      Object.defineProperty(process, 'arch', { value: 'arm64' });
+      Object.defineProperty(process, 'platform', {
+        value: 'linux',
+        writable: false,
+        enumerable: true,
+        configurable: true,
+      });
+      Object.defineProperty(process, 'arch', {
+        value: 'arm64',
+        writable: false,
+        enumerable: true,
+        configurable: true,
+      });
 
       const platform = detectPlatform();
 
@@ -40,8 +81,18 @@ describe('Platform Detection', () => {
     });
 
     it('should detect Linux x64', () => {
-      Object.defineProperty(process, 'platform', { value: 'linux' });
-      Object.defineProperty(process, 'arch', { value: 'x64' });
+      Object.defineProperty(process, 'platform', {
+        value: 'linux',
+        writable: false,
+        enumerable: true,
+        configurable: true,
+      });
+      Object.defineProperty(process, 'arch', {
+        value: 'x64',
+        writable: false,
+        enumerable: true,
+        configurable: true,
+      });
 
       const platform = detectPlatform();
 
@@ -49,15 +100,35 @@ describe('Platform Detection', () => {
     });
 
     it('should throw error on Windows', () => {
-      Object.defineProperty(process, 'platform', { value: 'win32' });
-      Object.defineProperty(process, 'arch', { value: 'x64' });
+      Object.defineProperty(process, 'platform', {
+        value: 'win32',
+        writable: false,
+        enumerable: true,
+        configurable: true,
+      });
+      Object.defineProperty(process, 'arch', {
+        value: 'x64',
+        writable: false,
+        enumerable: true,
+        configurable: true,
+      });
 
       expect(() => detectPlatform()).toThrow('Weaviate Embedded is not supported on Windows');
     });
 
     it('should throw error on unsupported OS', () => {
-      Object.defineProperty(process, 'platform', { value: 'freebsd' });
-      Object.defineProperty(process, 'arch', { value: 'x64' });
+      Object.defineProperty(process, 'platform', {
+        value: 'freebsd',
+        writable: false,
+        enumerable: true,
+        configurable: true,
+      });
+      Object.defineProperty(process, 'arch', {
+        value: 'x64',
+        writable: false,
+        enumerable: true,
+        configurable: true,
+      });
 
       expect(() => detectPlatform()).toThrow(
         'Unsupported OS: freebsd. Only macOS (darwin) and Linux are supported.'
@@ -65,8 +136,18 @@ describe('Platform Detection', () => {
     });
 
     it('should throw error on unsupported architecture (ia32)', () => {
-      Object.defineProperty(process, 'platform', { value: 'linux' });
-      Object.defineProperty(process, 'arch', { value: 'ia32' });
+      Object.defineProperty(process, 'platform', {
+        value: 'linux',
+        writable: false,
+        enumerable: true,
+        configurable: true,
+      });
+      Object.defineProperty(process, 'arch', {
+        value: 'ia32',
+        writable: false,
+        enumerable: true,
+        configurable: true,
+      });
 
       expect(() => detectPlatform()).toThrow(
         'Unsupported architecture: ia32. Only arm64 and x64 are supported.'
@@ -74,8 +155,18 @@ describe('Platform Detection', () => {
     });
 
     it('should throw error on unsupported architecture (mips)', () => {
-      Object.defineProperty(process, 'platform', { value: 'darwin' });
-      Object.defineProperty(process, 'arch', { value: 'mips' });
+      Object.defineProperty(process, 'platform', {
+        value: 'darwin',
+        writable: false,
+        enumerable: true,
+        configurable: true,
+      });
+      Object.defineProperty(process, 'arch', {
+        value: 'mips',
+        writable: false,
+        enumerable: true,
+        configurable: true,
+      });
 
       expect(() => detectPlatform()).toThrow(
         'Unsupported architecture: mips. Only arm64 and x64 are supported.'
