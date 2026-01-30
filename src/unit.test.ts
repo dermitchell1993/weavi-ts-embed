@@ -1,5 +1,6 @@
 import { homedir } from 'os';
 import { join } from 'path';
+import { describe, it, expect } from 'vitest';
 import { EmbeddedOptions } from './embedded';
 
 describe('embedded', () => {

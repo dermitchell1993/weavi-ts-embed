@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import weaviate, { EmbeddedClient, EmbeddedOptions } from '.';
 
 describe('embedded', () => {
