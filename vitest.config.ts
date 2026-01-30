@@ -1,19 +1,13 @@
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  cacheDir: '.vitest-cache',
   test: {
     globals: true,
     environment: 'node',
     testTimeout: 60000,
     pool: 'threads',
-    poolOptions: {
-      threads: {
-        singleThread: true, // For integration tests that need isolation
-      },
-    },
-    cache: {
-      dir: '.vitest-cache',
-    },
+    singleThread: true, // For integration tests that need isolation
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
