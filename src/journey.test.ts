@@ -15,13 +15,13 @@ describe('embedded', () => {
     client.embedded.stop();
     // Wait for the process to fully terminate before next test
     await new Promise((resolve) => setTimeout(resolve, 2000));
-  });
+  }, 120000); // Increased timeout to 120s for embedded DB startup
 
   it('starts/stops EmbeddedDB with custom options', async () => {
     const client: EmbeddedClient = await weaviate.client(
       new EmbeddedOptions({
         port: 7878,
-        version: '1.19.8',
+        version: '1.27.0', // Updated to v1.27.0 for v3 client compatibility (gRPC requirement)
         env: {
           QUERY_DEFAULTS_LIMIT: 50,
           DEFAULT_VECTORIZER_MODULE: 'text2vec-openai',
@@ -39,7 +39,7 @@ describe('embedded', () => {
     client.embedded.stop();
     // Wait for the process to fully terminate before next test
     await new Promise((resolve) => setTimeout(resolve, 2000));
-  });
+  }, 120000); // Increased timeout to 120s for embedded DB startup
 
   it('starts/stops EmbeddedDB with latest version', async () => {
     const client: EmbeddedClient = await weaviate.client(
@@ -54,10 +54,11 @@ describe('embedded', () => {
     client.embedded.stop();
     // Wait for the process to fully terminate before next test
     await new Promise((resolve) => setTimeout(resolve, 2000));
-  });
+  }, 120000); // Increased timeout to 120s for embedded DB startup
 
   it('starts/stops EmbeddedDB with binaryUrl', async () => {
-    let binaryUrl = 'https://github.com/weaviate/weaviate/releases/download/v1.19.8/weaviate-v1.19.8-';
+    // Updated to v1.27.0 for v3 client compatibility (gRPC requirement)
+    let binaryUrl = 'https://github.com/weaviate/weaviate/releases/download/v1.27.0/weaviate-v1.27.0-';
     if (process.platform == 'darwin') {
       binaryUrl += 'darwin-all.zip';
     } else {
@@ -75,7 +76,7 @@ describe('embedded', () => {
     client.embedded.stop();
     // Wait for the process to fully terminate
     await new Promise((resolve) => setTimeout(resolve, 2000));
-  });
+  }, 120000); // Increased timeout to 120s for embedded DB startup
 });
 
 // Checks communication between the client and embedded server
