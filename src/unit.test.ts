@@ -1,10 +1,9 @@
 import { homedir } from 'os';
 import { join } from 'path';
+import { describe, it, expect } from 'vitest';
 import { EmbeddedOptions } from './embedded';
 
 describe('embedded', () => {
-  jest.setTimeout(60 * 1000);
-
   it('creates EmbeddedOptions with defaults', () => {
     const opt = new EmbeddedOptions();
 
@@ -50,5 +49,14 @@ describe('embedded', () => {
         version: '123',
       });
     }).toThrow("invalid version: 123. version must resemble '{major}.{minor}.{patch}, or 'latest'");
+  });
+
+  it('failed to create EmbeddedOptions with both version and binaryUrl', () => {
+    return expect(() => {
+      const opt = new EmbeddedOptions({
+        version: '1.19.8',
+        binaryUrl: 'https://example.com/weaviate',
+      });
+    }).toThrow('cannot provide both version and binaryUrl');
   });
 });
