@@ -1,6 +1,14 @@
 import { EmbeddedDB, EmbeddedOptions } from './embedded';
 import weaviate, { WeaviateClient } from 'weaviate-client';
 
+/**
+ * EmbeddedClient extends the v3 WeaviateClient interface with embedded database lifecycle management.
+ * 
+ * v3 Migration Notes:
+ * - WeaviateClient interface from weaviate-client v3 includes: collections, backup, cluster, etc.
+ * - Schema management moved from .schema to .collections API in v3
+ * - No WeaviateClass type in v3 (use collections API instead)
+ */
 export interface EmbeddedClient extends WeaviateClient {
   embedded: EmbeddedDB;
 }
@@ -37,3 +45,6 @@ export * from './platform';
 
 // Export v3 type definitions (explicitly exported to document v3 migration types)
 export type { BinaryInfo, ProcessConfig, HealthCheckConfig } from './types';
+
+// Re-export commonly used v3 WeaviateClient types for convenience
+export type { WeaviateClient } from 'weaviate-client';
