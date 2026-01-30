@@ -17,6 +17,9 @@
  * platform details, and verification information. Used by the binary
  * management module to download, verify, and manage Weaviate binaries.
  *
+ * Type-safe: platform and arch use literal unions matching Platform interface
+ * to ensure compile-time verification of supported platforms.
+ *
  * @example
  * ```typescript
  * const binaryInfo: BinaryInfo = {
@@ -24,7 +27,7 @@
  *   url: 'https://github.com/weaviate/weaviate/releases/...',
  *   path: '/home/user/.cache/weaviate-embedded-1.23.7',
  *   platform: 'linux',
- *   arch: 'amd64',
+ *   arch: 'x64',
  *   exists: false
  * };
  * ```
@@ -47,15 +50,16 @@ export interface BinaryInfo {
   path: string;
 
   /**
-   * Operating system platform (e.g., 'linux', 'darwin', 'win32').
+   * Operating system platform.
+   * Only 'darwin' (macOS) and 'linux' are supported by Weaviate Embedded.
    */
-  platform: NodeJS.Platform;
+  platform: 'darwin' | 'linux';
 
   /**
-   * CPU architecture (e.g., 'arm64', 'amd64', 'x64').
-   * Normalized to match Weaviate's release naming convention.
+   * CPU architecture.
+   * Only 'arm64' and 'x64' are supported by Weaviate Embedded.
    */
-  arch: string;
+  arch: 'arm64' | 'x64';
 
   /**
    * Optional checksum for binary verification (MD5, SHA256, etc.).
