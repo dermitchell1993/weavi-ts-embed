@@ -19,7 +19,7 @@ export default defineConfig({
     // Optimize for CI
     reporters: process.env.CI ? ['verbose'] : ['default'],
     logHeapUsage: true,
-    maxThreads: 2,
+    maxThreads: 4,
     minThreads: 1,
   },
 });
