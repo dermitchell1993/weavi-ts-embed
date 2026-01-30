@@ -3,7 +3,7 @@ import weaviate, { WeaviateClient } from 'weaviate-client';
 
 /**
  * EmbeddedClient extends the v3 WeaviateClient interface with embedded database lifecycle management.
- * 
+ *
  * v3 Migration Notes:
  * - WeaviateClient interface from weaviate-client v3 includes: collections, backup, cluster, etc.
  * - Schema management moved from .schema to .collections API in v3
