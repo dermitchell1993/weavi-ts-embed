@@ -1,17 +1,31 @@
 import { EmbeddedDB, EmbeddedOptions } from './embedded';
-import weaviate, { ConnectionParams, WeaviateClient } from 'weaviate-ts-client';
+import weaviate, { WeaviateClient } from 'weaviate-client';
 
 export interface EmbeddedClient extends WeaviateClient {
   embedded: EmbeddedDB;
 }
 
 const app = {
-  client: function (embedded: EmbeddedOptions, conn?: ConnectionParams): EmbeddedClient {
+  client: async function (
+    embedded: EmbeddedOptions,
+    conn?: { host: string; scheme: string }
+  ): Promise<EmbeddedClient> {
     if (!conn) conn = { host: '127.0.0.1:6789', scheme: 'http' };
-    const client = weaviate.client(conn);
+    const embeddedDB = new EmbeddedDB(embedded);
+    await embeddedDB.start();
+    const [host, portStr] = conn.host.split(':');
+    const port = parseInt(portStr, 10);
+    const client = await weaviate.connectToCustom({
+      httpHost: host,
+      httpPort: port,
+      httpSecure: conn.scheme === 'https',
+      grpcHost: host,
+      grpcPort: 50051, // Default gRPC port for embedded Weaviate
+      grpcSecure: conn.scheme === 'https',
+    });
     const embeddedClient: EmbeddedClient = {
       ...client,
-      embedded: new EmbeddedDB(embedded),
+      embedded: embeddedDB,
     };
     return embeddedClient;
   },

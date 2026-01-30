@@ -1,5 +1,4 @@
 import weaviate, { EmbeddedClient, EmbeddedOptions } from '.';
-import { WeaviateClass } from 'weaviate-ts-client';
 
 describe('embedded', () => {
   it('checks platform', () => {});
@@ -9,8 +8,7 @@ describe('embedded', () => {
   }
 
   it('starts/stops EmbeddedDB with default options', async () => {
-    const client: EmbeddedClient = weaviate.client(new EmbeddedOptions());
-    await client.embedded.start();
+    const client: EmbeddedClient = await weaviate.client(new EmbeddedOptions());
     await checkClientServerConn(client).catch((err: any) => {
       throw new Error(`unexpected failure: ${err}`);
     });
@@ -18,7 +16,7 @@ describe('embedded', () => {
   });
 
   it('starts/stops EmbeddedDB with custom options', async () => {
-    const client: EmbeddedClient = weaviate.client(
+    const client: EmbeddedClient = await weaviate.client(
       new EmbeddedOptions({
         port: 7878,
         version: '1.19.8',
@@ -32,7 +30,6 @@ describe('embedded', () => {
         host: '127.0.0.1:7878',
       }
     );
-    await client.embedded.start();
     await checkClientServerConn(client).catch((err: any) => {
       client.embedded.stop();
       throw new Error(`unexpected failure: ${err}`);
@@ -41,12 +38,11 @@ describe('embedded', () => {
   });
 
   it('starts/stops EmbeddedDB with latest version', async () => {
-    const client: EmbeddedClient = weaviate.client(
+    const client: EmbeddedClient = await weaviate.client(
       new EmbeddedOptions({
         version: 'latest',
       })
     );
-    await client.embedded.start();
     await checkClientServerConn(client).catch((err: any) => {
       client.embedded.stop();
       throw new Error(`unexpected failure: ${err}`);
@@ -61,12 +57,11 @@ describe('embedded', () => {
     } else {
       binaryUrl += `linux-amd64.tar.gz`;
     }
-    const client: EmbeddedClient = weaviate.client(
+    const client: EmbeddedClient = await weaviate.client(
       new EmbeddedOptions({
         binaryUrl: binaryUrl,
       })
     );
-    await client.embedded.start();
     await checkClientServerConn(client).catch((err: any) => {
       client.embedded.stop();
       throw new Error(`unexpected failure: ${err}`);
@@ -76,31 +71,25 @@ describe('embedded', () => {
 });
 
 // Checks communication between the client and embedded server
-// by creating, then deleting a class
+// by creating, then deleting a collection
 async function checkClientServerConn(client: EmbeddedClient) {
-  const testClass = {
-    class: 'TestClass',
-    properties: [{ name: 'stringProp', dataType: ['string'] }],
+  const testCollection = {
+    name: 'TestCollection',
+    properties: [{ name: 'stringProp', dataType: 'text' }],
   };
 
-  await client.schema
-    .classCreator()
-    .withClass(testClass)
-    .do()
-    .then((res: WeaviateClass) => {
-      expect(res.class).toEqual('TestClass');
-      console.log('class created!');
-    })
-    .catch((err: any) => {
-      throw new Error(`unexpected error: ${err}`);
-    });
+  try {
+    const res = await client.collections.create(testCollection);
+    expect(res.name).toEqual('TestCollection');
+    console.log('collection created!');
+  } catch (err: any) {
+    throw new Error(`unexpected error: ${err}`);
+  }
 
-  await client.schema
-    .classDeleter()
-    .withClassName(testClass.class)
-    .do()
-    .then(() => console.log('class deleted!'))
-    .catch((err: any) => {
-      throw new Error(`unexpected error: ${err}`);
-    });
+  try {
+    await client.collections.delete(testCollection.name);
+    console.log('collection deleted!');
+  } catch (err: any) {
+    throw new Error(`unexpected error: ${err}`);
+  }
 }
