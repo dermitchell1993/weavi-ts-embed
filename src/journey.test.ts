@@ -81,18 +81,39 @@ describe('embedded', () => {
 
 // Checks communication between the client and embedded server
 // by creating, then deleting a collection
+/* eslint-disable no-await-in-loop */
 async function checkClientServerConn(client: EmbeddedClient) {
   const testCollection = {
     name: 'TestCollection',
     properties: [{ name: 'stringProp', dataType: 'text' }],
   };
 
-  try {
-    const res = await client.collections.create(testCollection);
-    expect(res.name).toEqual('TestCollection');
-    console.log('collection created!');
-  } catch (err: any) {
-    throw new Error(`unexpected error: ${err}`);
+  // Retry logic to handle Raft leader election timing
+  const maxRetries = 10;
+  const retryDelay = 1500; // 1.5 seconds
+  let lastError: any;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await client.collections.create(testCollection);
+      expect(res.name).toEqual('TestCollection');
+      console.log('collection created!');
+      break; // Success, exit retry loop
+    } catch (err: any) {
+      lastError = err;
+      const errorMessage = err.message || String(err);
+
+      // Check if it's a "leader not found" error (Raft not ready)
+      if (errorMessage.includes('leader not found') && attempt < maxRetries) {
+        console.log(`Raft leader not ready, retrying (${attempt}/${maxRetries})...`);
+        await new Promise((resolve) => setTimeout(resolve, retryDelay));
+      } else if (attempt === maxRetries) {
+        throw new Error(`unexpected error after ${maxRetries} retries: ${err}`);
+      } else {
+        // Different error, fail immediately
+        throw new Error(`unexpected error: ${err}`);
+      }
+    }
   }
 
   try {
