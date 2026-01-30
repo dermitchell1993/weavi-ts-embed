@@ -69,8 +69,7 @@ jobs:
     runs-on: ubuntu-latest
     if: >
       github.event_name == 'push' ||
-      (github.event_name == 'pull_request' &&
-       contains(github.event.pull_request.labels.*.name, 'run-integration-tests'))
+      github.event_name == 'pull_request'
     steps:
     - uses: actions/checkout@v4
       with:

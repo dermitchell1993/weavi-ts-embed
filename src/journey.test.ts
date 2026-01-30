@@ -15,8 +15,8 @@ describe('embedded', () => {
     });
     client.embedded.stop();
     // Wait for the process to fully terminate before next test
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-  }, 120000); // Increased timeout to 120s for embedded DB startup
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }, 30000); // Optimized timeout to 30s for embedded DB startup
 
   it('starts/stops EmbeddedDB with custom options', async () => {
     const client: EmbeddedClient = await weaviate.client(
@@ -39,8 +39,8 @@ describe('embedded', () => {
     });
     client.embedded.stop();
     // Wait for the process to fully terminate before next test
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-  }, 120000); // Increased timeout to 120s for embedded DB startup
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }, 30000); // Optimized timeout to 30s for embedded DB startup
 
   it('starts/stops EmbeddedDB with latest version', async () => {
     const client: EmbeddedClient = await weaviate.client(
@@ -54,8 +54,8 @@ describe('embedded', () => {
     });
     client.embedded.stop();
     // Wait for the process to fully terminate before next test
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-  }, 120000); // Increased timeout to 120s for embedded DB startup
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }, 30000); // Optimized timeout to 30s for embedded DB startup
 
   it('starts/stops EmbeddedDB with binaryUrl', async () => {
     // Updated to v1.27.0 for v3 client compatibility (gRPC requirement)
@@ -76,8 +76,8 @@ describe('embedded', () => {
     });
     client.embedded.stop();
     // Wait for the process to fully terminate
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-  }, 120000); // Increased timeout to 120s for embedded DB startup
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }, 30000); // Optimized timeout to 30s for embedded DB startup
 });
 
 // Checks communication between the client and embedded server
