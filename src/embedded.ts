@@ -1,6 +1,7 @@
 /* eslint-disable no-sync */
 import fs from 'fs';
 import { get } from 'https';
+import http from 'http';
 import net from 'net';
 import { spawn } from 'child_process';
 import { dirname, basename } from 'path/posix';
@@ -353,17 +354,52 @@ export class EmbeddedDB {
         clearTimeout(timeout);
         clearInterval(interval);
         reject(new Error(`failed to connect to embedded db @ ${this.options.host}:${this.options.port}`));
-      }, 30000);
+      }, 60000); // Increased timeout to 60 seconds
 
       const interval = setInterval(() => {
-        this.isListening().then((listening) => {
-          if (listening) {
+        this.isApiReady().then((ready) => {
+          if (ready) {
             clearTimeout(timeout);
             clearInterval(interval);
             resolve(null);
           }
         });
-      }, 500);
+      }, 1000); // Check every 1 second instead of 0.5
+    });
+  }
+
+  private isApiReady(): Promise<boolean> {
+    return new Promise((resolve) => {
+      const options = {
+        hostname: this.options.host,
+        port: this.options.port,
+        path: '/v1/meta',
+        method: 'GET',
+        timeout: 2000,
+      };
+
+      const req = http.request(options, (res: any) => {
+        if (res.statusCode === 200) {
+          console.log('Weaviate API is ready!');
+          resolve(true);
+        } else {
+          console.log(`Weaviate API not ready yet, status: ${res.statusCode}`);
+          resolve(false);
+        }
+      });
+
+      req.on('error', (err: any) => {
+        console.log('Trying to connect to Weaviate API...', JSON.stringify(err));
+        resolve(false);
+      });
+
+      req.on('timeout', () => {
+        console.log('Weaviate API connection timeout');
+        req.destroy();
+        resolve(false);
+      });
+
+      req.end();
     });
   }
 
