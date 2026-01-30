@@ -20,3 +20,6 @@ const app = {
 export default app;
 export * from './embedded';
 export * from './platform';
+
+// Export v3 type definitions (explicitly exported to document v3 migration types)
+export type { BinaryInfo, ProcessConfig, HealthCheckConfig } from './types';
