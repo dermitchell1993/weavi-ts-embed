@@ -13,6 +13,8 @@ describe('embedded', () => {
       throw new Error(`unexpected failure: ${err}`);
     });
     client.embedded.stop();
+    // Wait for the process to fully terminate before next test
+    await new Promise((resolve) => setTimeout(resolve, 2000));
   });
 
   it('starts/stops EmbeddedDB with custom options', async () => {
@@ -35,6 +37,8 @@ describe('embedded', () => {
       throw new Error(`unexpected failure: ${err}`);
     });
     client.embedded.stop();
+    // Wait for the process to fully terminate before next test
+    await new Promise((resolve) => setTimeout(resolve, 2000));
   });
 
   it('starts/stops EmbeddedDB with latest version', async () => {
@@ -48,6 +52,8 @@ describe('embedded', () => {
       throw new Error(`unexpected failure: ${err}`);
     });
     client.embedded.stop();
+    // Wait for the process to fully terminate before next test
+    await new Promise((resolve) => setTimeout(resolve, 2000));
   });
 
   it('starts/stops EmbeddedDB with binaryUrl', async () => {
@@ -67,6 +73,8 @@ describe('embedded', () => {
       throw new Error(`unexpected failure: ${err}`);
     });
     client.embedded.stop();
+    // Wait for the process to fully terminate
+    await new Promise((resolve) => setTimeout(resolve, 2000));
   });
 });
 
