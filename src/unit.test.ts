@@ -50,4 +50,13 @@ describe('embedded', () => {
       });
     }).toThrow("invalid version: 123. version must resemble '{major}.{minor}.{patch}, or 'latest'");
   });
+
+  it('failed to create EmbeddedOptions with both version and binaryUrl', () => {
+    return expect(() => {
+      const opt = new EmbeddedOptions({
+        version: '1.19.8',
+        binaryUrl: 'https://example.com/weaviate',
+      });
+    }).toThrow('cannot provide both version and binaryUrl');
+  });
 });
