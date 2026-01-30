@@ -6,7 +6,7 @@ export default defineConfig({
     environment: 'node',
     testTimeout: 60000,
     pool: 'threads',
-    singleThread: true, // For integration tests that need isolation
+    threads: false, // Allow parallel execution for faster CI runs
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
@@ -19,7 +19,7 @@ export default defineConfig({
     // Optimize for CI
     reporters: process.env.CI ? ['verbose'] : ['default'],
     logHeapUsage: true,
-    maxThreads: 2,
+    maxThreads: 4,
     minThreads: 1,
   },
 });
