@@ -3,7 +3,6 @@ import { join } from 'path';
 import { EmbeddedOptions } from './embedded';
 
 describe('embedded', () => {
-
   it('creates EmbeddedOptions with defaults', () => {
     const opt = new EmbeddedOptions();
 
