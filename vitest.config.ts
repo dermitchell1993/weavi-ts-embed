@@ -6,12 +6,7 @@ export default defineConfig({
     environment: 'node',
     testTimeout: 60000,
     pool: 'threads',
-    poolOptions: {
-      threads: {
-        singleThread: false,
-        useAtomics: true,
-      },
-    },
+    threads: false, // Allow parallel execution for faster CI runs
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

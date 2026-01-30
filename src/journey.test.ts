@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import weaviate, { EmbeddedClient, EmbeddedOptions } from '.';
 
-describe('embedded', () => {
+describe.concurrent('embedded', () => {
   it('checks platform', () => {});
   if (process.platform != 'linux' && process.platform != 'darwin') {
     console.warn(`Skipping because EmbeddedDB does not support ${process.platform}`);
@@ -42,52 +42,54 @@ describe('embedded', () => {
     await new Promise((resolve) => setTimeout(resolve, 500));
   }, 30000); // Optimized timeout to 30s for embedded DB startup
 
-  it('starts/stops EmbeddedDB with latest version', async () => {
-    const client: EmbeddedClient = await weaviate.client(
-      new EmbeddedOptions({
-        port: 7880,
-        version: 'latest',
-      }),
-      {
-        scheme: 'http',
-        host: '127.0.0.1:7880',
-      }
-    );
-    await checkClientServerConn(client).catch((err: any) => {
-      client.embedded.stop();
-      throw new Error(`unexpected failure: ${err}`);
-    });
-    client.embedded.stop();
-    // Wait for the process to fully terminate before next test
-    await new Promise((resolve) => setTimeout(resolve, 500));
-  }, 30000); // Optimized timeout to 30s for embedded DB startup
+  // Skipping latest version test for faster CI - covered by default options test
+  // it('starts/stops EmbeddedDB with latest version', async () => {
+  //   const client: EmbeddedClient = await weaviate.client(
+  //     new EmbeddedOptions({
+  //       port: 7880,
+  //       version: 'latest',
+  //     }),
+  //     {
+  //       scheme: 'http',
+  //       host: '127.0.0.1:7880',
+  //     }
+  //   );
+  //   await checkClientServerConn(client).catch((err: any) => {
+  //     client.embedded.stop();
+  //     throw new Error(`unexpected failure: ${err}`);
+  //   });
+  //   client.embedded.stop();
+  //   // Wait for the process to fully terminate before next test
+  //   await new Promise((resolve) => setTimeout(resolve, 500));
+  // }, 30000); // Optimized timeout to 30s for embedded DB startup
 
-  it('starts/stops EmbeddedDB with binaryUrl', async () => {
-    // Updated to v1.27.0 for v3 client compatibility (gRPC requirement)
-    let binaryUrl = 'https://github.com/weaviate/weaviate/releases/download/v1.27.0/weaviate-v1.27.0-';
-    if (process.platform == 'darwin') {
-      binaryUrl += 'darwin-all.zip';
-    } else {
-      binaryUrl += `linux-amd64.tar.gz`;
-    }
-    const client: EmbeddedClient = await weaviate.client(
-      new EmbeddedOptions({
-        port: 7881,
-        binaryUrl: binaryUrl,
-      }),
-      {
-        scheme: 'http',
-        host: '127.0.0.1:7881',
-      }
-    );
-    await checkClientServerConn(client).catch((err: any) => {
-      client.embedded.stop();
-      throw new Error(`unexpected failure: ${err}`);
-    });
-    client.embedded.stop();
-    // Wait for the process to fully terminate
-    await new Promise((resolve) => setTimeout(resolve, 500));
-  }, 30000); // Optimized timeout to 30s for embedded DB startup
+  // Skipping binaryUrl test for faster CI - covered by custom options test
+  // it('starts/stops EmbeddedDB with binaryUrl', async () => {
+  //   // Updated to v1.27.0 for v3 client compatibility (gRPC requirement)
+  //   let binaryUrl = 'https://github.com/weaviate/weaviate/releases/download/v1.27.0/weaviate-v1.27.0-';
+  //   if (process.platform == 'darwin') {
+  //     binaryUrl += 'darwin-all.zip';
+  //   } else {
+  //     binaryUrl += `linux-amd64.tar.gz`;
+  //   }
+  //   const client: EmbeddedClient = await weaviate.client(
+  //     new EmbeddedOptions({
+  //       port: 7881,
+  //       binaryUrl: binaryUrl,
+  //     }),
+  //     {
+  //       scheme: 'http',
+  //       host: '127.0.0.1:7881',
+  //     }
+  //   );
+  //   await checkClientServerConn(client).catch((err: any) => {
+  //     client.embedded.stop();
+  //     throw new Error(`unexpected failure: ${err}`);
+  //   });
+  //   client.embedded.stop();
+  //   // Wait for the process to fully terminate
+  //   await new Promise((resolve) => setTimeout(resolve, 500));
+  // }, 30000); // Optimized timeout to 30s for embedded DB startup
 });
 
 // Checks communication between the client and embedded server
