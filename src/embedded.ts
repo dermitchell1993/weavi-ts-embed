@@ -33,7 +33,7 @@ export class EmbeddedOptions {
   env: NodeJS.ProcessEnv;
 
   constructor(cfg?: EmbeddedOptionsConfig) {
-    if (this.version && this.binaryUrl) {
+    if (cfg?.version && cfg?.binaryUrl) {
       throw new Error('cannot provide both version and binaryUrl');
     }
     this.host = cfg && cfg.host ? cfg.host : '127.0.0.1';
