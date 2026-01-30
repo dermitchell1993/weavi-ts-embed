@@ -67,7 +67,10 @@ jobs:
 
   integration-tests:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    if: >
+      github.event_name == 'push' ||
+      (github.event_name == 'pull_request' &&
+       contains(github.event.pull_request.labels.*.name, 'run-integration-tests'))
     steps:
     - uses: actions/checkout@v4
       with:
@@ -85,21 +88,8 @@ jobs:
         key: ${{ runner.os }}-weaviate-binaries-${{ hashFiles('src/**/*.ts') }}
         restore-keys: |
           ${{ runner.os }}-weaviate-binaries-
-    - name: "Get changed files"
-      id: changed-files
-      uses: tj-actions/changed-files@v44
-      with:
-        files: |
-          src/**/*.ts
-          src/**/*.js
     - name: "Run integration tests"
-      run: |
-        if [[ "${{ steps.changed-files.outputs.any_changed }}" == "true" ]] || [[ "${{ github.event_name }}" == "push" ]]; then
-          echo "Running integration tests..."
-          npm run test:integration
-        else
-          echo "No source changes detected, skipping integration tests..."
-        fi
+      run: npm run test:integration
       env:
         CI: true
 
