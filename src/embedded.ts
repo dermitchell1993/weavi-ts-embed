@@ -59,6 +59,10 @@ export class EmbeddedOptions {
       ENABLE_MODULES:
         'text2vec-openai,text2vec-cohere,text2vec-huggingface,' +
         'ref2vec-centroid,generative-openai,qna-openai',
+      // Raft optimization for faster leader election in test environments
+      RAFT_BOOTSTRAP_EXPECT: '1', // Single node cluster
+      RAFT_ELECTION_TIMEOUT: '1000', // 1 second election timeout (faster than default)
+      RAFT_HEARTBEAT_TIMEOUT: '500', // 500ms heartbeat (faster than default)
       // Any above defaults can be overridden with export env vars
       ...process.env,
     };
@@ -354,17 +358,26 @@ export class EmbeddedDB {
         clearTimeout(timeout);
         clearInterval(interval);
         reject(new Error(`failed to connect to embedded db @ ${this.options.host}:${this.options.port}`));
-      }, 60000); // Increased timeout to 60 seconds
+      }, 90000); // Increased timeout to 90 seconds for Raft leader election
 
       const interval = setInterval(() => {
         this.isApiReady().then((ready) => {
           if (ready) {
-            clearTimeout(timeout);
-            clearInterval(interval);
-            resolve(null);
+            // Additional check for readiness endpoint to ensure Raft leader election
+            this.isSystemReady()
+              .then((systemReady) => {
+                if (systemReady) {
+                  clearTimeout(timeout);
+                  clearInterval(interval);
+                  resolve(null);
+                }
+              })
+              .catch(() => {
+                // Continue waiting if readiness check fails
+              });
           }
         });
-      }, 1000); // Check every 1 second instead of 0.5
+      }, 1000); // Check every 1 second
     });
   }
 
@@ -395,6 +408,41 @@ export class EmbeddedDB {
 
       req.on('timeout', () => {
         console.log('Weaviate API connection timeout');
+        req.destroy();
+        resolve(false);
+      });
+
+      req.end();
+    });
+  }
+
+  private isSystemReady(): Promise<boolean> {
+    return new Promise((resolve) => {
+      const options = {
+        hostname: this.options.host,
+        port: this.options.port,
+        path: '/v1/.well-known/ready',
+        method: 'GET',
+        timeout: 2000,
+      };
+
+      const req = http.request(options, (res: any) => {
+        if (res.statusCode === 200) {
+          console.log('Weaviate system is ready (Raft leader elected)!');
+          resolve(true);
+        } else {
+          console.log(`Weaviate system not ready yet, status: ${res.statusCode}`);
+          resolve(false);
+        }
+      });
+
+      req.on('error', (err: any) => {
+        console.log('Trying to check Weaviate system readiness...', JSON.stringify(err));
+        resolve(false);
+      });
+
+      req.on('timeout', () => {
+        console.log('Weaviate system readiness check timeout');
         req.destroy();
         resolve(false);
       });

@@ -89,9 +89,9 @@ async function checkClientServerConn(client: EmbeddedClient) {
     properties: [{ name: 'stringProp', dataType: 'text' }],
   };
 
-  // Retry logic to handle Raft leader election timing
-  const maxRetries = 10;
-  const retryDelay = 1500; // 1.5 seconds
+  // Enhanced retry logic to handle Raft leader election timing
+  const maxRetries = 15;
+  const baseRetryDelay = 2000; // 2 seconds base delay
   let lastError: any;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -104,15 +104,22 @@ async function checkClientServerConn(client: EmbeddedClient) {
       lastError = err;
       const errorMessage = err.message || String(err);
 
-      // Check if it's a "leader not found" error (Raft not ready)
-      if (errorMessage.includes('leader not found') && attempt < maxRetries) {
-        console.log(`Raft leader not ready, retrying (${attempt}/${maxRetries})...`);
-        await new Promise((resolve) => setTimeout(resolve, retryDelay));
+      // Check for Raft-related errors that indicate leader election issues
+      const isRaftError =
+        errorMessage.includes('leader not found') ||
+        errorMessage.includes('raft') ||
+        errorMessage.includes('consensus');
+
+      if (isRaftError && attempt < maxRetries) {
+        // Exponential backoff with jitter to handle timing variations
+        const delay = baseRetryDelay + Math.random() * 1000 + attempt * 500;
+        console.log(`Raft system not ready (attempt ${attempt}/${maxRetries}), waiting ${delay}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
       } else if (attempt === maxRetries) {
-        throw new Error(`unexpected error after ${maxRetries} retries: ${err}`);
+        throw new Error(`failed to create collection after ${maxRetries} retries: ${lastError}`);
       } else {
         // Different error, fail immediately
-        throw new Error(`unexpected error: ${err}`);
+        throw new Error(`unexpected error during collection creation: ${err}`);
       }
     }
   }
