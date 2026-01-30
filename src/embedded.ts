@@ -61,8 +61,11 @@ export class EmbeddedOptions {
         'ref2vec-centroid,generative-openai,qna-openai',
       // Raft optimization for faster leader election in test environments
       RAFT_BOOTSTRAP_EXPECT: '1', // Single node cluster
-      RAFT_ELECTION_TIMEOUT: '1000', // 1 second election timeout (faster than default)
-      RAFT_HEARTBEAT_TIMEOUT: '500', // 500ms heartbeat (faster than default)
+      RAFT_ELECTION_TIMEOUT: process.env.RAFT_ELECTION_TIMEOUT || '1000', // 1 second election timeout (configurable)
+      RAFT_HEARTBEAT_TIMEOUT: process.env.RAFT_HEARTBEAT_TIMEOUT || '500', // 500ms heartbeat (configurable)
+      RAFT_LEADER_LEASE_TIMEOUT: process.env.RAFT_LEADER_LEASE_TIMEOUT || '500', // 500ms leader lease timeout
+      RAFT_SNAPSHOT_INTERVAL: process.env.RAFT_SNAPSHOT_INTERVAL || '120000', // 2 minutes snapshot interval
+      RAFT_SNAPSHOT_THRESHOLD: process.env.RAFT_SNAPSHOT_THRESHOLD || '8192', // Snapshot threshold
       // Any above defaults can be overridden with export env vars
       ...process.env,
     };
@@ -354,25 +357,38 @@ export class EmbeddedDB {
 
   private waitTillListening(): Promise<null> {
     return new Promise((resolve, reject) => {
+      // Configurable timeout via environment variable, default 120 seconds
+      const startupTimeout = parseInt(process.env.WEAVIATE_STARTUP_TIMEOUT || '120000', 10);
+      console.log(`Waiting for Weaviate startup (timeout: ${startupTimeout}ms)...`);
+
       const timeout = setTimeout(() => {
         clearTimeout(timeout);
         clearInterval(interval);
-        reject(new Error(`failed to connect to embedded db @ ${this.options.host}:${this.options.port}`));
-      }, 90000); // Increased timeout to 90 seconds for Raft leader election
+        reject(
+          new Error(
+            `failed to connect to embedded db @ ${this.options.host}:${this.options.port} within ${startupTimeout}ms`
+          )
+        );
+      }, startupTimeout);
 
       const interval = setInterval(() => {
         this.isApiReady().then((ready) => {
           if (ready) {
+            console.log('API is ready, checking system readiness...');
             // Additional check for readiness endpoint to ensure Raft leader election
             this.isSystemReady()
               .then((systemReady) => {
                 if (systemReady) {
+                  console.log('System is fully ready with Raft leader elected!');
                   clearTimeout(timeout);
                   clearInterval(interval);
                   resolve(null);
+                } else {
+                  console.log('API ready but system not fully ready yet...');
                 }
               })
-              .catch(() => {
+              .catch((err) => {
+                console.log(`System readiness check failed: ${err.message}`);
                 // Continue waiting if readiness check fails
               });
           }
@@ -428,23 +444,75 @@ export class EmbeddedDB {
 
       const req = http.request(options, (res: any) => {
         if (res.statusCode === 200) {
-          console.log('Weaviate system is ready (Raft leader elected)!');
+          console.log('✅ Weaviate system is ready (Raft leader elected)!');
           resolve(true);
         } else {
-          console.log(`Weaviate system not ready yet, status: ${res.statusCode}`);
+          console.log(`⏳ Weaviate system not ready yet, status: ${res.statusCode}`);
           resolve(false);
         }
       });
 
       req.on('error', (err: any) => {
-        console.log('Trying to check Weaviate system readiness...', JSON.stringify(err));
+        console.log('🔍 Checking Weaviate system readiness...', JSON.stringify(err));
         resolve(false);
       });
 
       req.on('timeout', () => {
-        console.log('Weaviate system readiness check timeout');
+        console.log('⏰ Weaviate system readiness check timeout');
         req.destroy();
         resolve(false);
+      });
+
+      req.end();
+    });
+  }
+
+  // Diagnostic method to check cluster health and Raft status
+  async getClusterHealth(): Promise<any> {
+    try {
+      const response = await this.makeHttpRequest('/v1/cluster/statistics');
+      return response;
+    } catch (err) {
+      console.log('Cluster health check failed:', err);
+      return null;
+    }
+  }
+
+  private makeHttpRequest(path: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const options = {
+        hostname: this.options.host,
+        port: this.options.port,
+        path: path,
+        method: 'GET',
+        timeout: 5000,
+      };
+
+      const req = http.request(options, (res: any) => {
+        let data = '';
+        res.on('data', (chunk: string) => {
+          data += chunk;
+        });
+        res.on('end', () => {
+          try {
+            if (res.statusCode === 200) {
+              resolve(JSON.parse(data));
+            } else {
+              reject(new Error(`HTTP ${res.statusCode}: ${data}`));
+            }
+          } catch (err) {
+            reject(err);
+          }
+        });
+      });
+
+      req.on('error', (err: any) => {
+        reject(err);
+      });
+
+      req.on('timeout', () => {
+        req.destroy();
+        reject(new Error('Request timeout'));
       });
 
       req.end();

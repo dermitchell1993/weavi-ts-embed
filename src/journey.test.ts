@@ -90,35 +90,47 @@ async function checkClientServerConn(client: EmbeddedClient) {
   };
 
   // Enhanced retry logic to handle Raft leader election timing
-  const maxRetries = 15;
-  const baseRetryDelay = 2000; // 2 seconds base delay
+  const maxRetries = parseInt(process.env.WEAVIATE_COLLECTION_RETRY_MAX || '20', 10);
+  const baseRetryDelay = parseInt(process.env.WEAVIATE_COLLECTION_RETRY_DELAY || '2500', 10); // 2.5 seconds base delay
   let lastError: any;
+
+  console.log(
+    `Testing collection creation with ${maxRetries} max retries, ${baseRetryDelay}ms base delay...`
+  );
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
+      console.log(`Attempt ${attempt}/${maxRetries}: Creating test collection...`);
       const res = await client.collections.create(testCollection);
       expect(res.name).toEqual('TestCollection');
-      console.log('collection created!');
+      console.log('✅ Collection created successfully!');
       break; // Success, exit retry loop
     } catch (err: any) {
       lastError = err;
       const errorMessage = err.message || String(err);
+      console.log(`❌ Attempt ${attempt} failed: ${errorMessage}`);
 
       // Check for Raft-related errors that indicate leader election issues
       const isRaftError =
         errorMessage.includes('leader not found') ||
         errorMessage.includes('raft') ||
-        errorMessage.includes('consensus');
+        errorMessage.includes('consensus') ||
+        errorMessage.includes('no leader') ||
+        errorMessage.includes('election');
 
       if (isRaftError && attempt < maxRetries) {
         // Exponential backoff with jitter to handle timing variations
         const delay = baseRetryDelay + Math.random() * 1000 + attempt * 500;
-        console.log(`Raft system not ready (attempt ${attempt}/${maxRetries}), waiting ${delay}ms...`);
+        console.log(
+          `🔄 Raft system not ready (attempt ${attempt}/${maxRetries}), waiting ${delay}ms before retry...`
+        );
         await new Promise((resolve) => setTimeout(resolve, delay));
       } else if (attempt === maxRetries) {
+        console.error(`💥 Failed to create collection after ${maxRetries} retries. Last error: ${lastError}`);
         throw new Error(`failed to create collection after ${maxRetries} retries: ${lastError}`);
       } else {
         // Different error, fail immediately
+        console.error(`💥 Unexpected error during collection creation: ${err}`);
         throw new Error(`unexpected error during collection creation: ${err}`);
       }
     }
