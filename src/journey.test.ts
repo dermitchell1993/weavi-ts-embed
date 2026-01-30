@@ -45,8 +45,13 @@ describe('embedded', () => {
   it('starts/stops EmbeddedDB with latest version', async () => {
     const client: EmbeddedClient = await weaviate.client(
       new EmbeddedOptions({
+        port: 7880,
         version: 'latest',
-      })
+      }),
+      {
+        scheme: 'http',
+        host: '127.0.0.1:7880',
+      }
     );
     await checkClientServerConn(client).catch((err: any) => {
       client.embedded.stop();
@@ -67,8 +72,13 @@ describe('embedded', () => {
     }
     const client: EmbeddedClient = await weaviate.client(
       new EmbeddedOptions({
+        port: 7881,
         binaryUrl: binaryUrl,
-      })
+      }),
+      {
+        scheme: 'http',
+        host: '127.0.0.1:7881',
+      }
     );
     await checkClientServerConn(client).catch((err: any) => {
       client.embedded.stop();
