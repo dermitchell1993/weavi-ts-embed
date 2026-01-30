@@ -350,11 +350,15 @@ export class EmbeddedDB {
 
   private waitTillListening(): Promise<null> {
     return new Promise((resolve, reject) => {
+      // Use shorter timeout in CI/test environments
+      const timeoutMs = process.env.CI ? 30000 : 60000;
+      const checkIntervalMs = process.env.CI ? 500 : 1000;
+
       const timeout = setTimeout(() => {
         clearTimeout(timeout);
         clearInterval(interval);
         reject(new Error(`failed to connect to embedded db @ ${this.options.host}:${this.options.port}`));
-      }, 60000); // Increased timeout to 60 seconds
+      }, timeoutMs);
 
       const interval = setInterval(() => {
         this.isApiReady().then((ready) => {
@@ -364,7 +368,7 @@ export class EmbeddedDB {
             resolve(null);
           }
         });
-      }, 1000); // Check every 1 second instead of 0.5
+      }, checkIntervalMs);
     });
   }
 
