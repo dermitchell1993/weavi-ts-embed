@@ -18,8 +18,7 @@ Defaults:
 ```ts
 import weaviate, { EmbeddedClient, EmbeddedOptions } from 'weaviate-ts-embedded';
 
-const client: EmbeddedClient = weaviate.client(new EmbeddedOptions());
-await client.embedded.start();
+const client: EmbeddedClient = await weaviate.client(new EmbeddedOptions());
 // use the client to interact with embedded Weaviate
 client.embedded.stop();
 ```
@@ -29,7 +28,7 @@ client.embedded.stop();
 ```ts
 import weaviate, { EmbeddedClient, EmbeddedOptions } from 'weaviate-ts-embedded';
 
-const client: EmbeddedClient = weaviate.client(
+const client: EmbeddedClient = await weaviate.client(
   new EmbeddedOptions({
     port: 7878,
     version: '1.18.1',
@@ -38,13 +37,11 @@ const client: EmbeddedClient = weaviate.client(
       DEFAULT_VECTORIZER_MODULE: 'text2vec-openai',
     },
   }),
-  // weaviate-ts-client ConnectionParams
   {
     scheme: 'http',
     host: '127.0.0.1:7878',
   }
 );
-await client.embedded.start();
 // use the client to interact with embedded Weaviate
 client.embedded.stop();
 ```
@@ -55,12 +52,11 @@ client.embedded.stop();
 import weaviate, { EmbeddedClient, EmbeddedOptions } from 'weaviate-ts-embedded';
 
 const binaryUrl = 'https://some-link-to-weaviate-binary';
-const client: EmbeddedClient = weaviate.client(
+const client: EmbeddedClient = await weaviate.client(
   new EmbeddedOptions({
     binaryUrl: binaryUrl,
   })
 );
-await client.embedded.start();
 // use the client to interact with embedded Weaviate
 client.embedded.stop();
 ```

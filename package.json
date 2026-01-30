@@ -15,8 +15,11 @@
   ],
   "scripts": {
     "test": "vitest run",
+    "test:unit": "vitest run src/unit.test.ts src/platform.test.ts",
+    "test:integration": "vitest run src/journey.test.ts",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:ci": "npm run test:unit && npm run test:integration",
     "build": "npm run lint && tsup src/index.ts --format esm --dts --clean --platform node --minify",
     "prepack": "npm run build",
     "lint": "eslint --ext .ts,.js .",
@@ -40,8 +43,10 @@
   "homepage": "https://github.com/weaviate/typescript-embedded#readme",
   "dependencies": {
     "adm-zip": "^0.5.10",
-    "tar": "^6.1.13",
-    "weaviate-ts-client": "^2.2.0"
+    "tar": "^6.1.13"
+  },
+  "peerDependencies": {
+    "weaviate-client": "^3.11.0"
   },
   "devDependencies": {
     "@curveball/bodyparser": "^0.5.0",
@@ -60,7 +65,8 @@
     "prettier": "^2.8.4",
     "tsup": "^6.7.0",
     "typescript": "^4.9.5",
-    "vitest": "^4.0.18"
+    "vitest": "^4.0.18",
+    "weaviate-client": "^3.11.0"
   },
   "lint-staged": {
     "*.{ts,js}": [
