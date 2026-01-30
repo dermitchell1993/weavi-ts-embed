@@ -2,7 +2,6 @@ import weaviate, { EmbeddedClient, EmbeddedOptions } from '.';
 import { WeaviateClass } from 'weaviate-ts-client';
 
 describe('embedded', () => {
-  jest.setTimeout(60 * 1000);
 
   it('checks platform', () => {});
   if (process.platform != 'linux' && process.platform != 'darwin') {
