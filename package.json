@@ -15,8 +15,11 @@
   ],
   "scripts": {
     "test": "vitest run",
+    "test:unit": "vitest run src/unit.test.ts src/platform.test.ts",
+    "test:integration": "vitest run src/journey.test.ts",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:ci": "npm run test:unit && npm run test:integration",
     "build": "npm run lint && tsup src/index.ts --format esm --dts --clean --platform node --minify",
     "prepack": "npm run build",
     "lint": "eslint --ext .ts,.js .",
