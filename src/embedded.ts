@@ -84,7 +84,9 @@ export class EmbeddedOptions {
     if (cfg.version == 'latest') {
       return 'latest';
     }
-    if (cfg.version.match(/[1-9]\.[1-9]{2}\..*/g)) {
+    // Match semantic versions: major.minor.patch (with optional suffix like -alpha.0)
+    // Major: 1-9 followed by any digits, Minor/Patch: one or more digits each
+    if (cfg.version.match(/^[1-9]\d*\.\d+\.\d+/)) {
       return cfg.version;
     }
     throw new Error(
