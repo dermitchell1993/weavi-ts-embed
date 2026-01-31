@@ -46,8 +46,9 @@ export * from './platform';
 // Export v3 type definitions (explicitly exported to document v3 migration types)
 export type { BinaryInfo, ProcessConfig, HealthCheckConfig } from './types';
 
-// Export health check utilities (Wave 1: Core Implementation)
+// Export Wave 1 modules
 export { waitForReady, checkHealth, checkLiveness } from './health-checker';
+export * from './process-manager';
 
 // Re-export commonly used v3 WeaviateClient types for convenience
 export type { WeaviateClient } from 'weaviate-client';
