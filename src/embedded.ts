@@ -55,13 +55,13 @@ export class EmbeddedOptions {
       QUERY_DEFAULTS_LIMIT: '20',
       PERSISTENCE_DATA_PATH: this.persistenceDataPath,
       CLUSTER_HOSTNAME: `Embedded_at_${this.port}`,
-      RAFT_BOOTSTRAP_EXPECT: '1', // Enable single-node Raft for embedded mode
       DEFAULT_VECTORIZER_MODULE: 'none',
       ENABLE_MODULES:
         'text2vec-openai,text2vec-cohere,text2vec-huggingface,' +
         'ref2vec-centroid,generative-openai,qna-openai',
       // Raft optimization for faster leader election in test environments
       RAFT_BOOTSTRAP_EXPECT: '1', // Single node cluster
+      RAFT_JOIN: `Embedded_at_${this.port}`, // Join self for single-node bootstrap
       RAFT_ELECTION_TIMEOUT: process.env.RAFT_ELECTION_TIMEOUT || '1000', // 1 second election timeout (configurable)
       RAFT_HEARTBEAT_TIMEOUT: process.env.RAFT_HEARTBEAT_TIMEOUT || '500', // 500ms heartbeat (configurable)
       RAFT_LEADER_LEASE_TIMEOUT: process.env.RAFT_LEADER_LEASE_TIMEOUT || '500', // 500ms leader lease timeout
@@ -118,7 +118,8 @@ export class EmbeddedOptions {
     if (!persistenceDataPath) {
       persistenceDataPath = defaultPersistenceDataPath;
     }
-    return persistenceDataPath;
+    // Use unique persistence path per port to avoid test conflicts
+    return `${persistenceDataPath}_${this.port}`;
   }
 }
 
