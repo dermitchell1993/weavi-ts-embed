@@ -34,33 +34,31 @@ describe('Configuration Validator', () => {
       });
 
       it('rejects invalid version format - single digit', () => {
-        expect(() => {
-          new EmbeddedOptions({ version: '123' });
-        }).toThrow("invalid version: 123. version must resemble '{major}.{minor}.{patch}, or 'latest'");
+        expect(() => new EmbeddedOptions({ version: '123' })).toThrow(
+          "invalid version: 123. version must resemble '{major}.{minor}.{patch}, or 'latest'"
+        );
       });
 
       it('rejects invalid version format - missing patch', () => {
-        expect(() => {
-          new EmbeddedOptions({ version: '1.19' });
-        }).toThrow("invalid version: 1.19. version must resemble '{major}.{minor}.{patch}, or 'latest'");
+        expect(() => new EmbeddedOptions({ version: '1.19' })).toThrow(
+          "invalid version: 1.19. version must resemble '{major}.{minor}.{patch}, or 'latest'"
+        );
       });
 
       it('rejects invalid version format - zero major version', () => {
-        expect(() => {
-          new EmbeddedOptions({ version: '0.19.0' });
-        }).toThrow("invalid version: 0.19.0. version must resemble '{major}.{minor}.{patch}, or 'latest'");
+        expect(() => new EmbeddedOptions({ version: '0.19.0' })).toThrow(
+          "invalid version: 0.19.0. version must resemble '{major}.{minor}.{patch}, or 'latest'"
+        );
       });
 
       it('rejects invalid version format - zero minor version', () => {
-        expect(() => {
-          new EmbeddedOptions({ version: '1.09.0' });
-        }).toThrow("invalid version: 1.09.0. version must resemble '{major}.{minor}.{patch}, or 'latest'");
+        expect(() => new EmbeddedOptions({ version: '1.09.0' })).toThrow(
+          "invalid version: 1.09.0. version must resemble '{major}.{minor}.{patch}, or 'latest'"
+        );
       });
 
       it('rejects invalid version format - non-numeric', () => {
-        expect(() => {
-          new EmbeddedOptions({ version: 'abc.def.ghi' });
-        }).toThrow(
+        expect(() => new EmbeddedOptions({ version: 'abc.def.ghi' })).toThrow(
           "invalid version: abc.def.ghi. version must resemble '{major}.{minor}.{patch}, or 'latest'"
         );
       });
@@ -74,12 +72,13 @@ describe('Configuration Validator', () => {
       });
 
       it('rejects both version and binaryUrl', () => {
-        expect(() => {
-          new EmbeddedOptions({
-            version: '1.19.8',
-            binaryUrl: 'https://example.com/weaviate',
-          });
-        }).toThrow('cannot provide both version and binaryUrl');
+        expect(
+          () =>
+            new EmbeddedOptions({
+              version: '1.19.8',
+              binaryUrl: 'https://example.com/weaviate',
+            })
+        ).toThrow('cannot provide both version and binaryUrl');
       });
 
       it('generates unique binaryPath for different binaryUrls', () => {
@@ -311,26 +310,23 @@ describe('Configuration Validator', () => {
 
   describe('Error Messages', () => {
     it('provides clear error message for invalid version format', () => {
-      expect(() => {
-        new EmbeddedOptions({ version: 'invalid' });
-      }).toThrow("invalid version: invalid. version must resemble '{major}.{minor}.{patch}, or 'latest'");
+      expect(() => new EmbeddedOptions({ version: 'invalid' })).toThrow(
+        "invalid version: invalid. version must resemble '{major}.{minor}.{patch}, or 'latest'"
+      );
     });
 
     it('provides clear error message for both version and binaryUrl', () => {
-      expect(() => {
-        new EmbeddedOptions({
-          version: '1.19.0',
-          binaryUrl: 'https://example.com/weaviate',
-        });
-      }).toThrow('cannot provide both version and binaryUrl');
+      expect(
+        () =>
+          new EmbeddedOptions({
+            version: '1.19.0',
+            binaryUrl: 'https://example.com/weaviate',
+          })
+      ).toThrow('cannot provide both version and binaryUrl');
     });
 
     it('error message includes the invalid version value', () => {
-      try {
-        new EmbeddedOptions({ version: 'bad-version' });
-      } catch (error: any) {
-        expect(error.message).toContain('bad-version');
-      }
+      expect(() => new EmbeddedOptions({ version: 'bad-version' })).toThrow(/bad-version/);
     });
   });
 
