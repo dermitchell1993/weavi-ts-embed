@@ -59,13 +59,8 @@ export class EmbeddedOptions {
       ENABLE_MODULES:
         'text2vec-openai,text2vec-cohere,text2vec-huggingface,' +
         'ref2vec-centroid,generative-openai,qna-openai',
-      // Raft optimization for faster leader election in test environments
-      RAFT_BOOTSTRAP_EXPECT: '1', // Single node cluster
-      RAFT_ELECTION_TIMEOUT: process.env.RAFT_ELECTION_TIMEOUT || '1000', // 1 second election timeout (configurable)
-      RAFT_HEARTBEAT_TIMEOUT: process.env.RAFT_HEARTBEAT_TIMEOUT || '500', // 500ms heartbeat (configurable)
-      RAFT_LEADER_LEASE_TIMEOUT: process.env.RAFT_LEADER_LEASE_TIMEOUT || '500', // 500ms leader lease timeout
-      RAFT_SNAPSHOT_INTERVAL: process.env.RAFT_SNAPSHOT_INTERVAL || '120000', // 2 minutes snapshot interval
-      RAFT_SNAPSHOT_THRESHOLD: process.env.RAFT_SNAPSHOT_THRESHOLD || '8192', // Snapshot threshold
+      // Disable Raft for embedded single-node mode to avoid bootstrap issues
+      RAFT_ENABLE: 'false', // Disable Raft consensus for embedded mode
       // Any above defaults can be overridden with export env vars
       ...process.env,
     };
@@ -117,7 +112,8 @@ export class EmbeddedOptions {
     if (!persistenceDataPath) {
       persistenceDataPath = defaultPersistenceDataPath;
     }
-    return persistenceDataPath;
+    // Use unique persistence path per port to avoid test conflicts
+    return `${persistenceDataPath}_${this.port}`;
   }
 }
 
