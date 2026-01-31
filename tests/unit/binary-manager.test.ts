@@ -760,6 +760,21 @@ describe('BinaryManager - Edge Cases and Error Scenarios', () => {
     expect(version).toBe(buildVersion);
   });
 
+  // TODO: PRI-825 - Version validation security enhancement needed
+  // Currently BinaryManager accepts any string version without validation
+  // Should integrate with validateVersion() from config.ts
+  it('should accept any version string (validation gap - see PRI-825)', () => {
+    // CURRENT BEHAVIOR: No validation happens in BinaryManager constructor
+    // These all succeed but SHOULD be validated:
+    expect(() => new BinaryManager({ version: '1.23.7-rc.1' })).not.toThrow();
+    expect(() => new BinaryManager({ version: '1.23.7+build' })).not.toThrow();
+
+    // SECURITY GAP: Path traversal attempts are not blocked
+    // TODO PRI-825: Should reject versions with .., /, \\ characters
+    expect(() => new BinaryManager({ version: '../../../etc/passwd' })).not.toThrow();
+    expect(() => new BinaryManager({ version: '1.0.0/../tmp' })).not.toThrow();
+  });
+
   it('should use custom cacheDir in path generation', async () => {
     (fs.existsSync as Mock).mockReturnValue(false);
 
