@@ -16,7 +16,7 @@ import { dirname, join, basename } from 'path';
 import { homedir } from 'os';
 import Unzipper from 'adm-zip';
 import { extract } from 'tar';
-import { detectPlatform, getBinaryFilename, Platform } from './platform';
+import { detectPlatform, Platform } from './platform';
 import { BinaryInfo } from './types';
 
 /**
@@ -40,7 +40,21 @@ export interface BinaryManagerOptions {
   cacheDir?: string;
 
   /**
-   * Optional checksum for binary verification
+   * Optional checksum for binary verification (SHA-256 hex string)
+   *
+   * When provided, the downloaded binary will be verified against this checksum
+   * after extraction. If verification fails, the binary is deleted and an error
+   * is thrown.
+   *
+   * **Usage:**
+   * ```typescript
+   * const manager = new BinaryManager({
+   *   version: '1.23.7',
+   *   checksum: 'abc123...' // SHA-256 hex digest
+   * });
+   * ```
+   *
+   * Set `skipChecksumVerification: true` to disable verification (not recommended).
    */
   checksum?: string;
 
@@ -49,6 +63,12 @@ export interface BinaryManagerOptions {
    * @default false
    */
   skipChecksumVerification?: boolean;
+
+  /**
+   * Enable verbose logging for debugging
+   * @default false
+   */
+  verbose?: boolean;
 }
 
 /**
@@ -56,10 +76,11 @@ export interface BinaryManagerOptions {
  */
 export class BinaryManager {
   private readonly options: Required<
-    Pick<BinaryManagerOptions, 'version' | 'cacheDir' | 'skipChecksumVerification'>
+    Pick<BinaryManagerOptions, 'version' | 'cacheDir' | 'skipChecksumVerification' | 'verbose'>
   > &
     Pick<BinaryManagerOptions, 'binaryUrl' | 'checksum'>;
   private readonly platform: Platform;
+  private downloadInProgress: Promise<void> | null = null;
 
   /**
    * Creates a new BinaryManager instance
@@ -82,6 +103,7 @@ export class BinaryManager {
       cacheDir: options.cacheDir || defaultCacheDir,
       checksum: options.checksum,
       skipChecksumVerification: options.skipChecksumVerification || false,
+      verbose: options.verbose || false,
     };
   }
 
@@ -199,13 +221,26 @@ export class BinaryManager {
         } else if (resp.statusCode === 302 && resp.headers.location) {
           // Handle redirects
           const redirectProtocol = resp.headers.location.startsWith('https:') ? https : http;
-          redirectProtocol.get(resp.headers.location, (redirectResp) => {
-            redirectResp.pipe(file);
-            file.on('finish', () => {
-              file.close();
-              resolve(targetPath);
+          redirectProtocol
+            .get(resp.headers.location, (redirectResp) => {
+              redirectResp.pipe(file);
+              file.on('finish', () => {
+                file.close();
+                resolve(targetPath);
+              });
+              file.on('error', (err) => {
+                if (fs.existsSync(targetPath)) {
+                  fs.unlinkSync(targetPath);
+                }
+                reject(new Error(`Failed to write redirected download: ${err}`));
+              });
+            })
+            .on('error', (err) => {
+              if (fs.existsSync(targetPath)) {
+                fs.unlinkSync(targetPath);
+              }
+              reject(new Error(`Failed to follow redirect: ${err}`));
             });
-          });
         } else if (resp.statusCode === 404) {
           fs.unlinkSync(targetPath);
           reject(
@@ -317,12 +352,16 @@ export class BinaryManager {
     // Determine archive extension
     const archivePath = url.endsWith('.zip') ? `${targetBinaryPath}.zip` : `${targetBinaryPath}.tgz`;
 
-    console.log(`Downloading Weaviate binary from: ${url}`);
+    if (this.options.verbose) {
+      console.log(`[BinaryManager] Downloading Weaviate binary from: ${url}`);
+    }
 
     // Download the archive
     await this.downloadFromURL(url, archivePath);
 
-    console.log(`Extracting binary to: ${targetBinaryPath}`);
+    if (this.options.verbose) {
+      console.log(`[BinaryManager] Extracting binary to: ${targetBinaryPath}`);
+    }
 
     // Extract based on file type
     if (archivePath.endsWith('.zip')) {
@@ -361,9 +400,22 @@ export class BinaryManager {
 
   /**
    * Gets the path to the cached binary, downloading it if necessary
+   *
+   * **Concurrent Download Protection**: If a download is already in progress,
+   * subsequent calls will wait for the existing download to complete rather
+   * than starting multiple downloads.
+   *
    * @returns Promise that resolves to BinaryInfo with the binary path and metadata
    */
   async getCachedBinary(): Promise<BinaryInfo> {
+    // If download is already in progress, wait for it
+    if (this.downloadInProgress) {
+      if (this.options.verbose) {
+        console.log('[BinaryManager] Download already in progress, waiting...');
+      }
+      await this.downloadInProgress;
+    }
+
     // Resolve version
     const version = await this.resolveVersion();
 
@@ -385,22 +437,32 @@ export class BinaryManager {
     const exists = fs.existsSync(binaryPath);
 
     if (!exists) {
-      // Ensure cache directory exists
-      const cacheDir = dirname(binaryPath);
-      fs.mkdirSync(cacheDir, { recursive: true });
+      // Start download and store promise to prevent concurrent downloads
+      this.downloadInProgress = (async () => {
+        try {
+          // Ensure cache directory exists
+          const cacheDir = dirname(binaryPath);
+          fs.mkdirSync(cacheDir, { recursive: true });
 
-      // Download and extract binary
-      await this.downloadBinary(url, binaryPath);
+          // Download and extract binary
+          await this.downloadBinary(url, binaryPath);
 
-      // Verify checksum if provided
-      if (this.options.checksum && !this.options.skipChecksumVerification) {
-        const isValid = await this.verifyChecksum(binaryPath, this.options.checksum);
-        if (!isValid) {
-          // Clean up invalid binary
-          fs.unlinkSync(binaryPath);
-          throw new Error('Binary checksum verification failed');
+          // Verify checksum if provided
+          if (this.options.checksum && !this.options.skipChecksumVerification) {
+            const isValid = await this.verifyChecksum(binaryPath, this.options.checksum);
+            if (!isValid) {
+              // Clean up invalid binary
+              fs.unlinkSync(binaryPath);
+              throw new Error('Binary checksum verification failed');
+            }
+          }
+        } finally {
+          // Clear download flag when complete (success or failure)
+          this.downloadInProgress = null;
         }
-      }
+      })();
+
+      await this.downloadInProgress;
     }
 
     // Return binary info
@@ -420,8 +482,19 @@ export class BinaryManager {
    * @returns Promise that resolves to BinaryInfo
    */
   async getBinaryInfo(): Promise<BinaryInfo> {
-    const version = await this.resolveVersion();
-    const url = this.constructDownloadURL(version);
+    // Only resolve version if not using custom URL
+    let version: string;
+    let url: string;
+
+    if (this.options.binaryUrl) {
+      // Custom URL provided - skip version resolution
+      version = 'custom';
+      url = this.options.binaryUrl;
+    } else {
+      // Use version-based URL
+      version = await this.resolveVersion();
+      url = this.constructDownloadURL(version);
+    }
 
     let binaryPath: string;
     if (this.options.binaryUrl) {
