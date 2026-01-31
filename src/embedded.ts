@@ -285,7 +285,7 @@ export class EmbeddedDB {
     }
   }
 
-  private async ensureWeaviateBinaryExists() {
+  private async ensureWeaviateBinaryExists(): Promise<void> {
     // Double-check locking pattern to prevent concurrent downloads
     if (!fs.existsSync(`${this.options.binaryPath}`)) {
       const lockFile = `${this.options.binaryPath}.lock`;
