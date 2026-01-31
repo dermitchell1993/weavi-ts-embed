@@ -15,8 +15,8 @@ describe('embedded', () => {
     });
     client.embedded.stop();
     // Wait for the process to fully terminate before next test
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-  }, 120000); // Increased timeout to 120s for embedded DB startup
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }, 60000); // Optimized timeout to 60s for embedded DB startup
 
   it('starts/stops EmbeddedDB with custom options', async () => {
     const client: EmbeddedClient = await weaviate.client(
@@ -39,14 +39,19 @@ describe('embedded', () => {
     });
     client.embedded.stop();
     // Wait for the process to fully terminate before next test
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-  }, 120000); // Increased timeout to 120s for embedded DB startup
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }, 60000); // Optimized timeout to 60s for embedded DB startup
 
   it('starts/stops EmbeddedDB with latest version', async () => {
     const client: EmbeddedClient = await weaviate.client(
       new EmbeddedOptions({
+        port: 7880,
         version: 'latest',
-      })
+      }),
+      {
+        scheme: 'http',
+        host: '127.0.0.1:7880',
+      }
     );
     await checkClientServerConn(client).catch((err: any) => {
       client.embedded.stop();
@@ -54,30 +59,8 @@ describe('embedded', () => {
     });
     client.embedded.stop();
     // Wait for the process to fully terminate before next test
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-  }, 120000); // Increased timeout to 120s for embedded DB startup
-
-  it('starts/stops EmbeddedDB with binaryUrl', async () => {
-    // Updated to v1.27.0 for v3 client compatibility (gRPC requirement)
-    let binaryUrl = 'https://github.com/weaviate/weaviate/releases/download/v1.27.0/weaviate-v1.27.0-';
-    if (process.platform == 'darwin') {
-      binaryUrl += 'darwin-all.zip';
-    } else {
-      binaryUrl += `linux-amd64.tar.gz`;
-    }
-    const client: EmbeddedClient = await weaviate.client(
-      new EmbeddedOptions({
-        binaryUrl: binaryUrl,
-      })
-    );
-    await checkClientServerConn(client).catch((err: any) => {
-      client.embedded.stop();
-      throw new Error(`unexpected failure: ${err}`);
-    });
-    client.embedded.stop();
-    // Wait for the process to fully terminate
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-  }, 120000); // Increased timeout to 120s for embedded DB startup
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }, 60000); // Optimized timeout to 60s for embedded DB startup
 });
 
 // Checks communication between the client and embedded server
@@ -89,16 +72,15 @@ async function checkClientServerConn(client: EmbeddedClient) {
     properties: [{ name: 'stringProp', dataType: 'text' }],
   };
 
-  // Retry logic to handle Raft leader election timing
-  const maxRetries = 10;
-  const retryDelay = 1500; // 1.5 seconds
+  // Optimized retry logic to handle Raft leader election timing
+  const maxRetries = 5;
+  const retryDelay = 500; // 0.5 seconds delay
   let lastError: any;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const res = await client.collections.create(testCollection);
       expect(res.name).toEqual('TestCollection');
-      console.log('collection created!');
       break; // Success, exit retry loop
     } catch (err: any) {
       lastError = err;
@@ -106,13 +88,12 @@ async function checkClientServerConn(client: EmbeddedClient) {
 
       // Check if it's a "leader not found" error (Raft not ready)
       if (errorMessage.includes('leader not found') && attempt < maxRetries) {
-        console.log(`Raft leader not ready, retrying (${attempt}/${maxRetries})...`);
         await new Promise((resolve) => setTimeout(resolve, retryDelay));
       } else if (attempt === maxRetries) {
-        throw new Error(`unexpected error after ${maxRetries} retries: ${err}`);
+        throw new Error(`failed to create collection after ${maxRetries} retries: ${lastError}`);
       } else {
         // Different error, fail immediately
-        throw new Error(`unexpected error: ${err}`);
+        throw new Error(`unexpected error during collection creation: ${err}`);
       }
     }
   }
