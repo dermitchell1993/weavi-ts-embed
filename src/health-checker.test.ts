@@ -36,6 +36,21 @@ describe('health-checker', () => {
         expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('✅ Weaviate is ready'));
       });
 
+      it('should log exact success message format on first attempt', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        mockFetch.mockResolvedValue({ ok: true } as Response);
+
+        const config: HealthCheckConfig = {
+          host: 'localhost',
+          port: 8080,
+        };
+
+        await waitForReady(config);
+
+        // Verify exact console message format to catch formatting regressions
+        expect(consoleLogSpy).toHaveBeenCalledWith('✅ Weaviate is ready (1 attempts, 0ms)');
+      });
+
       it('should retry and eventually succeed when Weaviate becomes ready', async () => {
         const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
         let callCount = 0;
@@ -290,6 +305,43 @@ describe('health-checker', () => {
         expect(callTimestamps.length).toBe(5);
       });
 
+      it('should have monotonically increasing intervals with exponential backoff', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        let callCount = 0;
+        const callTimestamps: number[] = [];
+
+        mockFetch.mockImplementation(async () => {
+          callCount++;
+          callTimestamps.push(Date.now());
+          if (callCount < 5) {
+            throw new Error('Connection refused');
+          }
+          return { ok: true } as Response;
+        });
+
+        const config: HealthCheckConfig = {
+          host: 'localhost',
+          port: 8080,
+          timeout: 20000,
+          interval: 100,
+        };
+
+        await waitForReady(config);
+
+        expect(callTimestamps.length).toBe(5);
+
+        // Verify that intervals between attempts are monotonically increasing
+        // (each interval should be >= previous interval due to exponential backoff)
+        for (let i = 1; i < callTimestamps.length - 1; i++) {
+          const currentInterval = callTimestamps[i + 1] - callTimestamps[i];
+          const previousInterval = callTimestamps[i] - callTimestamps[i - 1];
+
+          // Current interval should be at least as large as previous (with some tolerance for timing variance)
+          // We allow 10ms tolerance for test environment variability
+          expect(currentInterval).toBeGreaterThanOrEqual(previousInterval - 10);
+        }
+      });
+
       it('should cap exponential backoff at maximum interval', async () => {
         const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
         let callCount = 0;
@@ -305,8 +357,8 @@ describe('health-checker', () => {
         const config: HealthCheckConfig = {
           host: 'localhost',
           port: 8080,
-          timeout: 100000, // Very long to allow many retries
-          interval: 100,
+          timeout: 50000, // Long enough to allow reaching the 5000ms cap
+          interval: 50, // Smaller initial interval for faster test execution
         };
 
         const startTime = Date.now();
@@ -316,7 +368,9 @@ describe('health-checker', () => {
         // With backoff cap at 5000ms, this should complete relatively quickly
         // even with many retries. Without cap, exponential growth would take much longer.
         expect(mockFetch).toHaveBeenCalledTimes(8);
-        expect(elapsed).toBeLessThan(60000); // Should not take a minute
+        // Should complete in under 15 seconds (50 + 75 + 112 + 168 + 252 + 378 + 567 = 1602ms to reach cap,
+        // then 5000ms * remaining attempts)
+        expect(elapsed).toBeLessThan(15000);
       });
 
       it('should start backoff from configured interval value', async () => {
@@ -513,7 +567,8 @@ describe('health-checker', () => {
           interval: 100,
         };
 
-        // Should fail immediately with negative timeout
+        // Expected behavior: Negative timeout is treated as immediately expired
+        // Implementation rejects immediately when startTime > deadline (which happens with negative timeout)
         await expect(waitForReady(config)).rejects.toThrow();
       });
 
@@ -537,7 +592,8 @@ describe('health-checker', () => {
           maxRetries: 5,
         };
 
-        // Should still work (setTimeout handles negative as 0)
+        // Expected behavior: Negative interval is tolerated (setTimeout treats negative as 0)
+        // This results in immediate retries without delay, which is acceptable for edge case handling
         await expect(waitForReady(config)).resolves.toBeUndefined();
         expect(callCount).toBeGreaterThanOrEqual(2);
       });
@@ -554,7 +610,8 @@ describe('health-checker', () => {
           maxRetries: -5,
         };
 
-        // Should fail immediately with negative maxRetries
+        // Expected behavior: Negative maxRetries causes immediate failure
+        // Loop condition (attempts < maxRetries) is never satisfied with negative values
         await expect(waitForReady(config)).rejects.toThrow();
       });
 
