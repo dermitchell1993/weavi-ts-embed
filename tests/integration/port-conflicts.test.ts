@@ -52,7 +52,7 @@ describe('Port Management Tests', () => {
           server.close(() => resolve());
         });
       } catch (err) {
-        console.warn(`Failed to stop client during cleanup: ${err}`);
+        console.warn(`Failed to close server during cleanup: ${err}`);
       }
     }
     /* eslint-enable no-await-in-loop */
@@ -216,7 +216,7 @@ describe('Port Management Tests', () => {
       expect(listening1).toBe(true);
 
       // Act - Stop the instance
-      client1.embedded.stop();
+      await client1.embedded.stop();
 
       // Wait for graceful shutdown and port release
       await new Promise((resolve) => setTimeout(resolve, 3000));
