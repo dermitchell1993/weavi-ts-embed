@@ -54,13 +54,20 @@ export class EmbeddedOptions {
       AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true',
       QUERY_DEFAULTS_LIMIT: '20',
       PERSISTENCE_DATA_PATH: this.persistenceDataPath,
+      // CLUSTER_HOSTNAME is required by Weaviate even for single-node instances.
+      // It's set to a port-specific value to ensure deterministic identity across restarts.
+      // Combined with port-specific persistence paths (see getPersistenceDataPath),
+      // this prevents Raft state conflicts when running multiple embedded instances.
       CLUSTER_HOSTNAME: `Embedded_at_${this.port}`,
       DEFAULT_VECTORIZER_MODULE: 'none',
       ENABLE_MODULES:
         'text2vec-openai,text2vec-cohere,text2vec-huggingface,' +
         'ref2vec-centroid,generative-openai,qna-openai',
-      // Disable Raft for embedded single-node mode to avoid bootstrap issues
-      RAFT_ENABLE: 'false', // Disable Raft consensus for embedded mode
+      // Disable Raft consensus for embedded single-node mode.
+      // Raft is designed for multi-node clusters and adds unnecessary startup overhead
+      // (~10-30s bootstrap delays) in embedded scenarios. This significantly improves
+      // startup time and reliability in CI/test environments.
+      RAFT_ENABLE: 'false',
       // Any above defaults can be overridden with export env vars
       ...process.env,
     };
@@ -125,7 +132,11 @@ export class EmbeddedOptions {
     if (!persistenceDataPath) {
       persistenceDataPath = defaultPersistenceDataPath;
     }
-    // Use unique persistence path per port to avoid test conflicts
+    // Use unique persistence path per port to prevent Raft state conflicts.
+    // Each embedded instance gets isolated storage, ensuring that:
+    // 1. Multiple instances can run concurrently without conflicts
+    // 2. Port changes don't trigger Raft "unknown node" errors
+    // 3. Test cleanup is simpler (just delete port-specific directory)
     return `${persistenceDataPath}_${this.port}`;
   }
 }
@@ -367,8 +378,12 @@ export class EmbeddedDB {
   private waitTillListening(): Promise<null> {
     return new Promise((resolve, reject) => {
       // Configurable timeout with CI/test-aware defaults
-      // CI: 30s, Production: 120s (configurable via WEAVIATE_STARTUP_TIMEOUT)
-      const defaultTimeout = process.env.CI ? 30000 : 120000;
+      // CI environments need longer timeouts due to:
+      // 1. Resource constraints (CPU/memory contention)
+      // 2. Raft consensus bootstrap delays (even for single-node embedded instances)
+      // 3. Concurrent test suite execution
+      // CI: 60s, Production: 120s (configurable via WEAVIATE_STARTUP_TIMEOUT)
+      const defaultTimeout = process.env.CI ? 60000 : 120000;
       const timeoutMs = parseInt(process.env.WEAVIATE_STARTUP_TIMEOUT || String(defaultTimeout), 10);
       const checkIntervalMs = process.env.CI ? 500 : 1000;
       console.log(`Waiting for Weaviate startup (timeout: ${timeoutMs}ms)...`);
