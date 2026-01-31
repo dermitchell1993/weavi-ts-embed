@@ -165,4 +165,11 @@ export interface HealthCheckConfig {
    * Calculated as timeout / interval if not specified.
    */
   maxRetries?: number;
+
+  /**
+   * Whether to suppress console logging during health checks.
+   * Useful for production environments where console spam is not desired.
+   * @default false
+   */
+  silent?: boolean;
 }
