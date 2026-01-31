@@ -46,5 +46,15 @@ export * from './platform';
 // Export v3 type definitions (explicitly exported to document v3 migration types)
 export type { BinaryInfo, ProcessConfig, HealthCheckConfig } from './types';
 
+// Export configuration validator utilities (Wave 1.5: Config Validator)
+export {
+  validateOptions,
+  applyDefaults,
+  mergeConfig,
+  prepareConfig,
+  ConfigValidationError,
+  DEFAULT_CONFIG,
+} from './config';
+
 // Re-export commonly used v3 WeaviateClient types for convenience
 export type { WeaviateClient } from 'weaviate-client';

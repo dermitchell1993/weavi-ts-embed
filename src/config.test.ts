@@ -136,6 +136,21 @@ describe('Configuration Validator', () => {
         const config: EmbeddedOptionsConfig = { host: '256.1.1.1' };
         expect(() => validateOptions(config)).toThrow(ConfigValidationError);
       });
+
+      it('should accept compressed IPv6 addresses', () => {
+        const ipv6Addresses = [
+          '::1', // loopback
+          '::', // all zeros
+          'fe80::1', // link-local
+          '2001:db8::1', // documentation
+          '2001:db8::8a2e:370:7334', // compressed
+          '::ffff:192.0.2.1', // IPv4-mapped
+        ];
+        ipv6Addresses.forEach((host) => {
+          const config: EmbeddedOptionsConfig = { host };
+          expect(() => validateOptions(config)).not.toThrow();
+        });
+      });
     });
 
     describe('port validation', () => {
@@ -187,13 +202,13 @@ describe('Configuration Validator', () => {
         expect(() => validateOptions(config)).toThrow('semantic versioning format');
       });
 
-      it('should reject version with leading zero in major', () => {
+      it('should accept early-stage versions (0.x.x)', () => {
         const config: EmbeddedOptionsConfig = { version: '0.2.3' };
-        expect(() => validateOptions(config)).toThrow(ConfigValidationError);
+        expect(() => validateOptions(config)).not.toThrow();
       });
 
       it('should accept valid semantic versions', () => {
-        const versions = ['1.0.0', '1.23.7', '10.20.30', 'latest'];
+        const versions = ['0.1.0', '0.2.3', '1.0.0', '1.23.7', '10.20.30', 'latest'];
         versions.forEach((version) => {
           const config: EmbeddedOptionsConfig = { version };
           expect(() => validateOptions(config)).not.toThrow();

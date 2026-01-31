@@ -57,8 +57,11 @@ function validateHost(host: string): void {
   // IPv4: strict validation for each octet (0-255)
   const ipv4Pattern =
     /^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])$/;
-  // IPv6: basic pattern matching
-  const ipv6Pattern = /^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$/;
+  // IPv6: supports full and compressed forms (::1, fe80::1, 2001:db8::1, etc.)
+  // Full form: 8 groups of 1-4 hex digits separated by colons
+  // Compressed form: :: can replace one or more groups of zeros
+  const ipv6Pattern =
+    /^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$/;
   // Hostname: alphanumeric with hyphens, can have dots, but must start with letter
   const hostnamePattern =
     /^(?:localhost|[a-zA-Z](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*)$/;
@@ -95,8 +98,9 @@ function validateVersion(version: string): void {
   }
   if (version !== 'latest') {
     // Semantic version format: {major}.{minor}.{patch}
-    // Match patterns like: 1.23.7, 1.2.3, 10.20.30
-    const versionPattern = /^[1-9]\d*\.\d+\.\d+$/;
+    // Match patterns like: 0.1.0, 1.23.7, 1.2.3, 10.20.30
+    // Follows semver spec which allows 0.x.x for early-stage software
+    const versionPattern = /^\d+\.\d+\.\d+$/;
     if (!versionPattern.test(version)) {
       throw new ConfigValidationError(
         "Version must be 'latest' or follow semantic versioning format: {major}.{minor}.{patch}",
