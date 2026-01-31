@@ -244,6 +244,7 @@ describe('Port Management Tests', () => {
       // Act & Assert - Attempting to use occupied ports should fail
       /* eslint-disable no-await-in-loop, no-loop-func */
       for (const port of [basePort, basePort + 1]) {
+        console.log(`Testing port conflict detection for port ${port}...`);
         await expect(async () => {
           const client = await weaviate.client(new EmbeddedOptions({ port }));
           activeClients.push(client);
@@ -264,6 +265,7 @@ describe('Port Management Tests', () => {
       // Act & Assert - Each custom port should work
       /* eslint-disable no-await-in-loop */
       for (const port of customPorts) {
+        console.log(`Testing custom port configuration: ${port}...`);
         const client = await weaviate.client(new EmbeddedOptions({ port }));
         activeClients.push(client);
 
@@ -290,6 +292,7 @@ describe('Port Management Tests', () => {
 
       /* eslint-disable no-await-in-loop */
       for (const port of edgePorts) {
+        console.log(`Testing edge case port number: ${port}...`);
         // Act
         const client = await weaviate.client(new EmbeddedOptions({ port }));
         activeClients.push(client);
@@ -320,22 +323,10 @@ describe('Port Management Tests', () => {
         properties: [{ name: 'testProp', dataType: 'text' }],
       };
 
-      // Retry logic for Raft leader election
-      let collectionCreated = false;
-      /* eslint-disable no-await-in-loop */
-      for (let attempt = 0; attempt < 10 && !collectionCreated; attempt++) {
-        try {
-          await client.collections.create(testCollection);
-          collectionCreated = true;
-        } catch (err: any) {
-          if (err.message?.includes('leader not found') && attempt < 9) {
-            await new Promise((resolve) => setTimeout(resolve, 1500));
-          } else if (attempt === 9) {
-            throw err;
-          }
-        }
-      }
-      /* eslint-enable no-await-in-loop */
+      // Create collection with Raft leader election retry logic
+      await retryWithRaftLeaderElection(async () => {
+        await client.collections.create(testCollection);
+      });
 
       await client.collections.delete(testCollection.name);
 
@@ -532,4 +523,36 @@ function occupyPort(port: number): Promise<net.Server> {
       resolve(server);
     });
   });
+}
+
+/**
+ * Retry an operation with Raft leader election awareness
+ * Handles "leader not found" errors during cluster initialization
+ */
+async function retryWithRaftLeaderElection<T>(
+  operation: () => Promise<T>,
+  maxRetries = 10,
+  retryDelayMs = 1500
+): Promise<T> {
+  /* eslint-disable no-await-in-loop */
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (err: any) {
+      const isLeaderError = err.message?.includes('leader not found');
+      const isLastAttempt = attempt === maxRetries - 1;
+
+      if (isLeaderError && !isLastAttempt) {
+        // Wait before retry for Raft leader election
+        await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+      } else {
+        // Either not a leader error, or we've exhausted retries
+        throw err;
+      }
+    }
+  }
+  /* eslint-enable no-await-in-loop */
+
+  // TypeScript requires a return, but we'll never reach here
+  throw new Error('Retry loop completed without result');
 }
