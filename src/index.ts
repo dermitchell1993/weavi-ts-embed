@@ -48,6 +48,7 @@ export * from './binary-manager';
 export type { BinaryInfo, ProcessConfig, HealthCheckConfig } from './types';
 
 // Export Wave 1 modules
+export { waitForReady, checkHealth, checkLiveness } from './health-checker';
 export * from './process-manager';
 
 // Re-export commonly used v3 WeaviateClient types for convenience
