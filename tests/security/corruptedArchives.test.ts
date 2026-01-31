@@ -45,10 +45,12 @@ import {
 describe('Corrupted Archive Handling - Security Tests', () => {
   let testArchivePath: string;
   let extractPath: string;
+  let testCounter = 0;
 
   beforeEach(() => {
-    // Create unique extraction path for each test
-    extractPath = path.join(tmpdir(), `extract-test-${Date.now()}`);
+    // Create unique extraction path for each test (with counter to prevent race conditions)
+    testCounter += 1;
+    extractPath = path.join(tmpdir(), `extract-test-${Date.now()}-${testCounter}`);
     fs.mkdirSync(extractPath, { recursive: true });
   });
 
@@ -73,7 +75,7 @@ describe('Corrupted Archive Handling - Security Tests', () => {
           cwd: extractPath,
           strict: true,
         });
-      }).rejects.toThrow(/invalid tar|unexpected end|corrupt|unrecognized|bad archive/i);
+      }).rejects.toThrow(/invalid|unexpected end|corrupt|unrecognized|bad archive|zlib/i);
 
       // Verify no files were extracted
       const extractedFiles = fs.readdirSync(extractPath);
@@ -91,17 +93,24 @@ describe('Corrupted Archive Handling - Security Tests', () => {
         });
         expect.fail('Should have thrown an error for corrupted tar');
       } catch (error) {
-        // Verify error message is helpful and descriptive
-        expect(error).toBeDefined();
-        expect(error instanceof Error).toBe(true);
-        expect(error.message).toBeTruthy();
-        expect(error.message.length).toBeGreaterThan(10);
+        // Verify error is correct type with proper type guard
+        expect(error).toBeInstanceOf(Error);
 
-        // Ensure error doesn't expose full system paths
-        const errorMsg = error.message.toLowerCase();
-        expect(errorMsg).not.toContain('/home/');
-        expect(errorMsg).not.toContain('/root/');
-        expect(errorMsg).not.toContain('c:\\users\\');
+        if (error instanceof Error) {
+          // Verify error message is helpful and descriptive
+          expect(error.message).toBeTruthy();
+          expect(error.message.length).toBeGreaterThan(10);
+
+          // Ensure error doesn't expose full system paths (case-insensitive check)
+          const errorMsg = error.message;
+          expect(errorMsg).not.toMatch(/\/home\//i);
+          expect(errorMsg).not.toMatch(/\/root\//i);
+          expect(errorMsg).not.toMatch(/\/users\//i);
+          expect(errorMsg).not.toMatch(/c:\\users\\/i);
+          expect(errorMsg).not.toMatch(/\\\\.*\\.*\\/i); // UNC paths
+          expect(errorMsg).not.toMatch(/\$\{.*\}/); // Environment variable expansion attempts
+          expect(errorMsg).not.toMatch(/%.*%/); // Windows environment variables
+        }
       }
     });
 
@@ -143,7 +152,7 @@ describe('Corrupted Archive Handling - Security Tests', () => {
         if (entries.length > 0) {
           zip.extractAllTo(extractPath, false);
         }
-      }).toThrow(); // Just verify it throws - error message varies by adm-zip version
+      }).toThrow(/invalid|corrupt|malformed|signature|header|end of central directory/i);
 
       // Verify no files were extracted
       if (fs.existsSync(extractPath)) {
@@ -159,11 +168,20 @@ describe('Corrupted Archive Handling - Security Tests', () => {
         new AdmZip(testArchivePath);
         expect.fail('Should have thrown an error for corrupted zip');
       } catch (error) {
-        // Verify error message is helpful
-        expect(error).toBeDefined();
-        expect(error instanceof Error).toBe(true);
-        expect(error.message).toBeTruthy();
-        expect(error.message.length).toBeGreaterThan(5);
+        // Verify error is correct type with proper type guard
+        expect(error).toBeInstanceOf(Error);
+
+        if (error instanceof Error) {
+          // Verify error message is helpful
+          expect(error.message).toBeTruthy();
+          expect(error.message.length).toBeGreaterThan(5);
+
+          // Ensure no path leakage (case-insensitive)
+          expect(error.message).not.toMatch(/\/home\//i);
+          expect(error.message).not.toMatch(/\/root\//i);
+          expect(error.message).not.toMatch(/\/users\//i);
+          expect(error.message).not.toMatch(/c:\\users\\/i);
+        }
       }
     });
 
@@ -172,7 +190,7 @@ describe('Corrupted Archive Handling - Security Tests', () => {
 
       expect(() => {
         new AdmZip(testArchivePath);
-      }).toThrow(); // Just verify it throws - error message varies
+      }).toThrow(/invalid|empty|corrupt|signature|header|end of central directory/i);
     });
   });
 
@@ -199,7 +217,7 @@ describe('Corrupted Archive Handling - Security Tests', () => {
       expect(() => {
         const zip = new AdmZip(testArchivePath);
         zip.getEntries(); // This should fail on corrupted zip
-      }).toThrow(); // Just verify it throws - error message varies
+      }).toThrow(/invalid|truncated|corrupt|signature|header|unexpected end|end of central directory/i);
     });
 
     it('should provide clear error for incomplete downloads (truncated archives)', async () => {
@@ -390,6 +408,12 @@ describe('Corrupted Archive Handling - Security Tests', () => {
   describe('Performance - Extraction Timeout', () => {
     it('should complete failed extraction detection quickly', async () => {
       testArchivePath = createCorruptedTarArchive();
+
+      const timings = {
+        detection: 0,
+        total: 0,
+      };
+
       const startTime = Date.now();
 
       try {
@@ -399,29 +423,41 @@ describe('Corrupted Archive Handling - Security Tests', () => {
           strict: true,
         });
       } catch (error) {
-        // Expected
+        timings.detection = Date.now() - startTime;
       }
 
-      const duration = Date.now() - startTime;
+      timings.total = Date.now() - startTime;
 
-      // Should fail fast - detection should be < 2 seconds
-      expect(duration).toBeLessThan(2000);
+      // Verify granular performance thresholds
+      expect(timings.detection, 'Initial corruption detection should be fast (< 500ms)').toBeLessThan(500);
+      expect(timings.total, 'Total time should be < 2 seconds').toBeLessThan(2000);
+
+      console.log(`✅ TAR corruption detected in ${timings.detection}ms (total: ${timings.total}ms)`);
     });
 
     it('should detect corrupted zip quickly', () => {
       testArchivePath = createCorruptedZipArchive();
+
+      const timings = {
+        detection: 0,
+        total: 0,
+      };
+
       const startTime = Date.now();
 
       try {
         new AdmZip(testArchivePath);
       } catch (error) {
-        // Expected
+        timings.detection = Date.now() - startTime;
       }
 
-      const duration = Date.now() - startTime;
+      timings.total = Date.now() - startTime;
 
-      // Should fail immediately on header validation
-      expect(duration).toBeLessThan(1000);
+      // Zip should fail immediately on header validation
+      expect(timings.detection, 'Initial header validation should be immediate (< 100ms)').toBeLessThan(100);
+      expect(timings.total, 'Total time should be < 1 second').toBeLessThan(1000);
+
+      console.log(`✅ ZIP corruption detected in ${timings.detection}ms (total: ${timings.total}ms)`);
     });
   });
 });

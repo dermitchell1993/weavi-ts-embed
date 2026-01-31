@@ -15,21 +15,49 @@ import AdmZip from 'adm-zip';
 
 /**
  * Creates a corrupted tar archive with invalid header
+ * Uses realistic tar magic bytes followed by corrupted data
  */
 export function createCorruptedTarArchive(): string {
   const tempPath = path.join(tmpdir(), `corrupted-${Date.now()}.tar.gz`);
-  const invalidTarContent = Buffer.from('This is not a valid tar file content at all!');
-  fs.writeFileSync(tempPath, invalidTarContent);
+
+  // Start with gzip magic bytes (1f 8b) to look like valid gzip,
+  // but follow with corrupted tar data
+  const corruptedContent = Buffer.concat([
+    Buffer.from([0x1f, 0x8b, 0x08, 0x00]), // gzip magic + flags
+    Buffer.from('CORRUPTED_TAR_DATA_THIS_IS_NOT_A_VALID_ARCHIVE'),
+  ]);
+
+  fs.writeFileSync(tempPath, corruptedContent);
+
+  // Validate file was created successfully
+  if (!fs.existsSync(tempPath)) {
+    throw new Error(`Failed to create corrupted tar archive at ${tempPath}`);
+  }
+
   return tempPath;
 }
 
 /**
  * Creates a corrupted zip archive with invalid header
+ * Uses realistic ZIP magic bytes followed by corrupted data
  */
 export function createCorruptedZipArchive(): string {
   const tempPath = path.join(tmpdir(), `corrupted-${Date.now()}.zip`);
-  const invalidZipContent = Buffer.from('This is definitely not a valid zip file!');
-  fs.writeFileSync(tempPath, invalidZipContent);
+
+  // Start with ZIP magic bytes (PK\x03\x04) to look like valid ZIP,
+  // but follow with corrupted structure
+  const corruptedContent = Buffer.concat([
+    Buffer.from([0x50, 0x4b, 0x03, 0x04]), // ZIP local file header signature
+    Buffer.from('CORRUPTED_ZIP_DATA_INVALID_STRUCTURE'),
+  ]);
+
+  fs.writeFileSync(tempPath, corruptedContent);
+
+  // Validate file was created successfully
+  if (!fs.existsSync(tempPath)) {
+    throw new Error(`Failed to create corrupted zip archive at ${tempPath}`);
+  }
+
   return tempPath;
 }
 
@@ -213,27 +241,34 @@ export async function createInternallyCorruptedTarArchive(): Promise<string> {
 
 /**
  * Cleanup helper to remove test archives
+ * Only ignores ENOENT errors (file not found)
  */
 export function cleanupArchive(archivePath: string): void {
   try {
     if (fs.existsSync(archivePath)) {
       fs.unlinkSync(archivePath);
     }
-  } catch (error) {
-    // Ignore cleanup errors in tests
-    console.warn(`Failed to cleanup ${archivePath}:`, error);
+  } catch (error: any) {
+    // Only ignore "file not found" errors - log others
+    if (error.code !== 'ENOENT') {
+      console.warn(`⚠️ Failed to cleanup archive ${archivePath}:`, error);
+    }
   }
 }
 
 /**
  * Cleanup helper to remove extracted directories
+ * Only ignores ENOENT errors (directory not found)
  */
 export function cleanupExtractedDir(dirPath: string): void {
   try {
     if (fs.existsSync(dirPath)) {
       fs.rmSync(dirPath, { recursive: true, force: true });
     }
-  } catch (error) {
-    console.warn(`Failed to cleanup directory ${dirPath}:`, error);
+  } catch (error: any) {
+    // Only ignore "directory not found" errors - log others
+    if (error.code !== 'ENOENT') {
+      console.warn(`⚠️ Failed to cleanup directory ${dirPath}:`, error);
+    }
   }
 }
