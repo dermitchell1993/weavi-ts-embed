@@ -436,6 +436,81 @@ describe('Port Management Tests', () => {
       expect(gossipPort).toBeGreaterThan(0);
       expect(gossipPort).not.toBe(httpPort); // Should be different from HTTP port
     }, 120000);
+
+    it('should handle gRPC port conflict gracefully', async () => {
+      // Arrange - Occupy the default gRPC port (50051)
+      const grpcPort = 50051;
+      const httpPort = 8333;
+      const server = await occupyPort(grpcPort);
+      occupiedServers.push(server);
+
+      // Act & Assert - Should fail when gRPC port is occupied
+      await expect(async () => {
+        const client = await weaviate.client(new EmbeddedOptions({ port: httpPort }), {
+          scheme: 'http',
+          host: `127.0.0.1:${httpPort}`,
+          grpcPort,
+        });
+        activeClients.push(client);
+      }).rejects.toThrow();
+
+      // Cleanup - Release gRPC port
+      await new Promise<void>((resolve) => {
+        server.close(() => resolve());
+      });
+      occupiedServers = occupiedServers.filter((s) => s !== server);
+
+      // Verify can start after port released
+      const client = await weaviate.client(new EmbeddedOptions({ port: httpPort }), {
+        scheme: 'http',
+        host: `127.0.0.1:${httpPort}`,
+        grpcPort,
+      });
+      activeClients.push(client);
+
+      expect(client.embedded.pid).toBeGreaterThan(0);
+    }, 120000);
+
+    it('should handle port range exhaustion scenario', async () => {
+      // Arrange - Occupy a range of ports to simulate exhaustion
+      const basePort = 10000;
+      const portCount = 5;
+      const occupiedPorts: number[] = [];
+
+      console.log(`Occupying ports ${basePort} to ${basePort + portCount - 1}...`);
+      /* eslint-disable no-await-in-loop */
+      for (let i = 0; i < portCount; i++) {
+        const port = basePort + i;
+        const server = await occupyPort(port);
+        occupiedServers.push(server);
+        occupiedPorts.push(port);
+      }
+      /* eslint-enable no-await-in-loop */
+
+      // Act & Assert - Verify all occupied ports are rejected
+      /* eslint-disable no-await-in-loop, no-loop-func */
+      for (const port of occupiedPorts) {
+        console.log(`Verifying port ${port} is blocked...`);
+        await expect(async () => {
+          const client = await weaviate.client(new EmbeddedOptions({ port }));
+          activeClients.push(client);
+        }).rejects.toThrow();
+      }
+      /* eslint-enable no-await-in-loop, no-loop-func */
+
+      // Act - Try port outside the occupied range (should succeed)
+      const availablePort = basePort + portCount;
+      console.log(`Testing available port ${availablePort}...`);
+      const client = await weaviate.client(new EmbeddedOptions({ port: availablePort }));
+      activeClients.push(client);
+
+      // Assert
+      expect(client.embedded.pid).toBeGreaterThan(0);
+      expect(client.embedded.options.port).toBe(availablePort);
+
+      const isListening = await checkPortListening('127.0.0.1', availablePort);
+      expect(isListening).toBe(true);
+    }, 180000); // Longer timeout for sequential operations
   });
 });
 
