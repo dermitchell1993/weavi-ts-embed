@@ -150,6 +150,7 @@ export * from './process-manager';
 // Export configuration validator utilities (Wave 1.5: Config Validator)
 export {
   validateOptions,
+  validateVersion,
   applyDefaults,
   mergeConfig,
   prepareConfig,

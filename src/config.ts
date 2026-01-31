@@ -90,23 +90,49 @@ function validatePort(port: number): void {
 }
 
 /**
- * Validates version field
+ * Validates version field with enhanced security and semver support
+ *
+ * Supports:
+ * - 'latest' keyword
+ * - Semantic versioning: major.minor.patch
+ * - Pre-release tags: 1.23.7-rc.1, 1.23.7-alpha.0, 1.23.7-beta.2
+ * - Build metadata: 1.23.7+20230615, 1.23.7+build.123
+ *
+ * Security features:
+ * - Prevents path traversal attacks (.., /, \)
+ * - Anchored regex to prevent substring matching
+ * - Validates major version starts with 1-9
  */
-function validateVersion(version: string): void {
+export function validateVersion(version: string): void {
   if (typeof version !== 'string') {
     throw new ConfigValidationError('Version must be a string', 'version');
   }
-  if (version !== 'latest') {
-    // Semantic version format: {major}.{minor}.{patch}
-    // Match patterns like: 0.1.0, 1.23.7, 1.2.3, 10.20.30
-    // Follows semver spec which allows 0.x.x for early-stage software
-    const versionPattern = /^\d+\.\d+\.\d+$/;
-    if (!versionPattern.test(version)) {
-      throw new ConfigValidationError(
-        "Version must be 'latest' or follow semantic versioning format: {major}.{minor}.{patch}",
-        'version'
-      );
-    }
+
+  // Allow 'latest' keyword
+  if (version === 'latest') {
+    return;
+  }
+
+  // Check for path traversal attempts FIRST (security)
+  if (version.includes('..') || version.includes('/') || version.includes('\\')) {
+    throw new ConfigValidationError(
+      'Version contains invalid characters (path traversal attempt detected)',
+      'version'
+    );
+  }
+
+  // Enhanced semver regex pattern that supports:
+  // - Major version: 1-9 followed by any digits (1, 10, 23, etc.)
+  // - Minor/patch: any digits including 0
+  // - Optional pre-release: -alpha.1, -beta.2, -rc.1, etc.
+  // - Optional build metadata: +20230615, +build.123, etc.
+  const versionPattern = /^[1-9]\d*\.\d+\.\d+(-[\w.]+)?(\+[\w.]+)?$/;
+
+  if (!versionPattern.test(version)) {
+    throw new ConfigValidationError(
+      "Version must be 'latest' or follow semantic versioning format: {major}.{minor}.{patch}[-prerelease][+build]",
+      'version'
+    );
   }
 }
 

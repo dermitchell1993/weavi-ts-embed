@@ -48,7 +48,7 @@ describe('embedded', () => {
       const opt = new EmbeddedOptions({
         version: '123',
       });
-    }).toThrow("invalid version: 123. version must resemble '{major}.{minor}.{patch}, or 'latest'");
+    }).toThrow("Version must be 'latest' or follow semantic versioning format");
   });
 
   it('failed to create EmbeddedOptions with both version and binaryUrl', () => {
@@ -58,5 +58,35 @@ describe('embedded', () => {
         binaryUrl: 'https://example.com/weaviate',
       });
     }).toThrow('cannot provide both version and binaryUrl');
+  });
+
+  it('accepts pre-release versions', () => {
+    const opt = new EmbeddedOptions({
+      version: '1.23.7-rc.1',
+    });
+    expect(opt.version).toEqual('1.23.7-rc.1');
+  });
+
+  it('accepts versions with build metadata', () => {
+    const opt = new EmbeddedOptions({
+      version: '1.23.7+20230615',
+    });
+    expect(opt.version).toEqual('1.23.7+20230615');
+  });
+
+  it('rejects path traversal in version', () => {
+    return expect(() => {
+      const opt = new EmbeddedOptions({
+        version: '1.0.0/../tmp',
+      });
+    }).toThrow('path traversal');
+  });
+
+  it('rejects version with directory traversal', () => {
+    return expect(() => {
+      const opt = new EmbeddedOptions({
+        version: '../../../etc/passwd',
+      });
+    }).toThrow('path traversal');
   });
 });
