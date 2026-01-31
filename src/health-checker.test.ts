@@ -6,8 +6,15 @@ import type { HealthCheckConfig } from './types';
 global.fetch = vi.fn();
 
 describe('health-checker', () => {
+  let consoleLogSpy: ReturnType<typeof vi.spyOn>;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleLogSpy.mockRestore();
   });
 
   describe('waitForReady', () => {
@@ -16,8 +23,6 @@ describe('health-checker', () => {
       mockFetch.mockResolvedValue({
         ok: true,
       } as Response);
-
-      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
       const config: HealthCheckConfig = {
         host: 'localhost',
@@ -28,8 +33,6 @@ describe('health-checker', () => {
 
       expect(mockFetch).toHaveBeenCalledWith('http://localhost:8080/v1/.well-known/ready');
       expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('✅ Weaviate is ready'));
-
-      consoleLogSpy.mockRestore();
     });
 
     it('should retry until Weaviate becomes ready', async () => {
@@ -46,8 +49,6 @@ describe('health-checker', () => {
         return { ok: true } as Response;
       });
 
-      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-
       const config: HealthCheckConfig = {
         host: 'localhost',
         port: 8080,
@@ -59,8 +60,6 @@ describe('health-checker', () => {
 
       expect(mockFetch).toHaveBeenCalledTimes(3);
       expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('✅ Weaviate is ready'));
-
-      consoleLogSpy.mockRestore();
     });
 
     it('should timeout after specified duration', async () => {
@@ -107,8 +106,6 @@ describe('health-checker', () => {
         return { ok: true } as Response;
       });
 
-      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-
       const config: HealthCheckConfig = {
         host: 'localhost',
         port: 8080,
@@ -121,8 +118,6 @@ describe('health-checker', () => {
       expect(mockFetch).toHaveBeenCalledTimes(2);
       expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('✅ Weaviate is ready'));
       expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('HTTP 503'));
-
-      consoleLogSpy.mockRestore();
     });
 
     it('should respect maxRetries parameter', async () => {
@@ -146,8 +141,6 @@ describe('health-checker', () => {
         ok: true,
       } as Response);
 
-      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-
       const config: HealthCheckConfig = {
         host: '192.168.1.100',
         port: 9090,
@@ -156,8 +149,6 @@ describe('health-checker', () => {
       await waitForReady(config);
 
       expect(mockFetch).toHaveBeenCalledWith('http://192.168.1.100:9090/v1/.well-known/ready');
-
-      consoleLogSpy.mockRestore();
     });
 
     it('should use exponential backoff between retries', async () => {
@@ -174,8 +165,6 @@ describe('health-checker', () => {
         return { ok: true } as Response;
       });
 
-      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-
       const config: HealthCheckConfig = {
         host: 'localhost',
         port: 8080,
@@ -187,8 +176,24 @@ describe('health-checker', () => {
 
       // Should make multiple attempts with increasing intervals
       expect(mockFetch).toHaveBeenCalledTimes(4);
+    });
 
-      consoleLogSpy.mockRestore();
+    it('should suppress console logs when silent is true', async () => {
+      const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+      mockFetch.mockResolvedValue({
+        ok: true,
+      } as Response);
+
+      const config: HealthCheckConfig = {
+        host: 'localhost',
+        port: 8080,
+        silent: true,
+      };
+
+      await waitForReady(config);
+
+      // Console log spy should not have been called
+      expect(consoleLogSpy).not.toHaveBeenCalled();
     });
   });
 

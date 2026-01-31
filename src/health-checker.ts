@@ -36,14 +36,23 @@ import type { HealthCheckConfig } from './types';
  * ```
  */
 export async function waitForReady(config: HealthCheckConfig): Promise<void> {
-  const { host, port, timeout = 30000, interval = 500, maxRetries = Math.ceil(timeout / interval) } = config;
+  const {
+    host,
+    port,
+    timeout = 30000,
+    interval = 500,
+    maxRetries = Math.ceil(timeout / interval),
+    silent = false,
+  } = config;
 
   const startTime = Date.now();
   const healthUrl = `http://${host}:${port}/v1/.well-known/ready`;
   let attemptCount = 0;
   let currentInterval = interval;
 
-  console.log(`[Health Check] Waiting for Weaviate at ${host}:${port}...`);
+  if (!silent) {
+    console.log(`[Health Check] Waiting for Weaviate at ${host}:${port}...`);
+  }
 
   // eslint-disable-next-line no-await-in-loop
   while (attemptCount < maxRetries && Date.now() - startTime < timeout) {
@@ -55,25 +64,31 @@ export async function waitForReady(config: HealthCheckConfig): Promise<void> {
       const response = await fetch(healthUrl);
       if (response.ok) {
         const elapsed = Date.now() - startTime;
-        console.log(`✅ Weaviate is ready (${attemptCount} attempts, ${elapsed}ms)`);
+        if (!silent) {
+          console.log(`✅ Weaviate is ready (${attemptCount} attempts, ${elapsed}ms)`);
+        }
         return;
       }
 
       // Non-OK response - server is up but not ready
-      console.log(`⏳ Weaviate not ready yet (HTTP ${response.status})`);
+      if (!silent) {
+        console.log(`⏳ Weaviate not ready yet (HTTP ${response.status})`);
+      }
     } catch (error) {
       // Connection refused - server not up yet (expected during startup)
       // Silently continue retrying
     }
 
     // Exponential backoff with cap at 5 seconds
-    const nextInterval = Math.min(currentInterval * 1.5, 5000);
-    currentInterval = nextInterval;
+    currentInterval = Math.min(currentInterval * 1.5, 5000);
     // eslint-disable-next-line no-await-in-loop, no-loop-func
-    await new Promise((resolve) => setTimeout(resolve, nextInterval));
+    await new Promise((resolve) => setTimeout(resolve, currentInterval));
   }
 
   const elapsed = Date.now() - startTime;
+  if (!silent) {
+    console.log(`❌ Health check timed out after ${elapsed}ms (${attemptCount} attempts)`);
+  }
   throw new Error(
     `Weaviate failed to start within ${timeout}ms after ${attemptCount} attempts (elapsed: ${elapsed}ms). ` +
       `Check that Weaviate is running at ${host}:${port}`
