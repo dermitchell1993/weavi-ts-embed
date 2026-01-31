@@ -40,14 +40,14 @@ export function isPortAvailable(port: number, host = '127.0.0.1'): Promise<boole
  *
  * @param port - Port number to wait for
  * @param host - Host address (default: '127.0.0.1')
- * @param timeoutMs - Maximum time to wait in milliseconds (default: 10000)
+ * @param timeoutMs - Maximum time to wait in milliseconds (default: 5000)
  * @param intervalMs - Polling interval in milliseconds (default: 100)
  * @throws Error if port doesn't become available within timeout
  */
 export async function waitForPortToBeAvailable(
   port: number,
   host = '127.0.0.1',
-  timeoutMs = 10000,
+  timeoutMs = 5000,
   intervalMs = 100
 ): Promise<void> {
   const startTime = Date.now();
@@ -78,8 +78,9 @@ export function isProcessRunning(pid: number): boolean {
     process.kill(pid, 0);
     return true;
   } catch (err: any) {
-    // ESRCH = process doesn't exist
-    return err.code !== 'ESRCH';
+    // ESRCH = process doesn't exist, so return false
+    // EPERM = process exists but we lack permissions, so return true
+    return err.code === 'EPERM';
   }
 }
 

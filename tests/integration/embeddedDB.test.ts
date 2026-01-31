@@ -40,7 +40,7 @@ const TEST_VERSION = '1.27.0'; // Using 1.27.0 for v3 client compatibility
 const TEST_TIMEOUT = 60000; // 60s: Generous timeout for binary download + startup
 const HEALTH_CHECK_TIMEOUT = 30000; // 30s for health check polling
 const PROCESS_STOP_TIMEOUT = 5000; // 5s for graceful shutdown
-const PORT_RELEASE_TIMEOUT = 10000; // 10s for port cleanup
+const PORT_RELEASE_TIMEOUT = 5000; // 5s for port cleanup (reduced for faster test execution)
 
 /**
  * Helper: Check if embedded DB is healthy via HTTP health endpoint
@@ -141,11 +141,17 @@ describe('EmbeddedDB Integration Tests', () => {
       forceKillIfRunning(pid);
     }
 
-    // Wait for port to be released
+    // Wait for port to be released - critical for test isolation
     if (testPort) {
-      await waitForPortToBeAvailable(testPort, '127.0.0.1', PORT_RELEASE_TIMEOUT).catch((err) => {
-        console.error(`❌ Port ${testPort} cleanup failed:`, err);
-      });
+      try {
+        await waitForPortToBeAvailable(testPort, '127.0.0.1', PORT_RELEASE_TIMEOUT);
+      } catch (err) {
+        console.error(`❌ CRITICAL: Port ${testPort} cleanup failed after ${PORT_RELEASE_TIMEOUT}ms:`, err);
+        // Port still in use - this will likely cause next test to fail
+        // Log additional diagnostics
+        console.error(`   This may indicate a hung process or OS-level port binding issue`);
+        throw err; // Re-throw to fail the test and prevent cascading failures
+      }
     }
 
     client = null;
@@ -508,7 +514,12 @@ describe('EmbeddedDB Integration Tests', () => {
       'should not leak memory across multiple start/stop cycles',
       async () => {
         const cycles = 10;
-        const maxAcceptableMemoryLeakMB = 50; // 50MB threshold
+        // Threshold accounts for:
+        // - Normal V8 heap growth (~10-15MB)
+        // - Test framework overhead (~5-10MB)
+        // - OS caching and Node.js internal buffers (~5-10MB)
+        // Total conservative threshold: 30MB
+        const maxAcceptableMemoryLeakMB = 30;
 
         // Take initial snapshot
         const initialSnapshot = takeResourceSnapshot();
