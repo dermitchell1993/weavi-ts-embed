@@ -5,8 +5,11 @@ export default defineConfig({
   test: {
     environment: 'node',
     testTimeout: 60000,
-    pool: 'threads',
-    singleThread: true, // For integration tests that need isolation
+    // Use threads for parallelization but limit for integration tests
+    pool: process.env.VITEST_POOL || 'threads',
+    maxThreads: process.env.CI ? 2 : 4,
+    minThreads: 1,
+    singleThread: process.env.VITEST_SINGLE_THREAD === 'true',
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
@@ -19,7 +22,5 @@ export default defineConfig({
     // Optimize for CI
     reporters: process.env.CI ? ['verbose'] : ['default'],
     logHeapUsage: true,
-    maxThreads: 4,
-    minThreads: 1,
   },
 });
