@@ -1,1 +1,1 @@
-{"version":"4.0.18","results":[[":src/journey.test.ts",{"duration":246807.862773,"failed":true}],[":src/platform.test.ts",{"duration":8.623736000000008,"failed":false}],[":src/unit.test.ts",{"duration":7.083540999999968,"failed":false}]]}
+{"version":"4.0.18","results":[[":src/journey.test.ts",{"duration":28046.23691,"failed":false}],[":src/platform.test.ts",{"duration":11.576591000000008,"failed":false}],[":src/unit.test.ts",{"duration":7.702307000000019,"failed":false}],[":src/config.test.ts",{"duration":31.39314999999999,"failed":false}]]}
