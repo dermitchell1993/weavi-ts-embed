@@ -101,8 +101,18 @@ function validateVersion(version: string): void {
     return;
   }
 
-  // Check for path traversal attempts FIRST
-  if (version.includes('..') || version.includes('/') || version.includes('\\')) {
+  // Check for path traversal attempts FIRST (including URL-encoded variants)
+  // Defense-in-depth: decode once to catch URL-encoded path traversal attempts
+  // e.g., '1.23.0%2F..%2F..%2Ftmp' would decode to '1.23.0/../../tmp'
+  let decodedVersion: string;
+  try {
+    decodedVersion = decodeURIComponent(version);
+  } catch {
+    // If decoding fails, use original version (malformed encoding is suspicious)
+    decodedVersion = version;
+  }
+
+  if (decodedVersion.includes('..') || decodedVersion.includes('/') || decodedVersion.includes('\\')) {
     throw new ConfigValidationError(
       'Version contains invalid characters (path traversal attempt detected)',
       'version'

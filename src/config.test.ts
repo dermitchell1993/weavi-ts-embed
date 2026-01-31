@@ -244,6 +244,19 @@ describe('Configuration Validator', () => {
         expect(() => validateOptions(config2)).toThrow(ConfigValidationError);
       });
 
+      it('rejects URL-encoded path traversal attempts', () => {
+        // %2F = /, %5C = \, %2E = .
+        const config1: EmbeddedOptionsConfig = { version: '1.23.0%2F..%2F..%2Ftmp' };
+        expect(() => validateOptions(config1)).toThrow(ConfigValidationError);
+        expect(() => validateOptions(config1)).toThrow(/path traversal attempt detected/);
+
+        const config2: EmbeddedOptionsConfig = { version: '%2E%2E%2F%2E%2E%2Fetc%2Fpasswd' };
+        expect(() => validateOptions(config2)).toThrow(ConfigValidationError);
+
+        const config3: EmbeddedOptionsConfig = { version: '1.0.0%5C..%5C..%5Ctmp' };
+        expect(() => validateOptions(config3)).toThrow(ConfigValidationError);
+      });
+
       it('provides clear error message for path traversal', () => {
         const config: EmbeddedOptionsConfig = { version: '../test' };
         expect(() => validateOptions(config)).toThrow(
@@ -263,6 +276,14 @@ describe('Configuration Validator', () => {
         expect(() => validateOptions({ version: '1.0.0' })).not.toThrow();
         expect(() => validateOptions({ version: '1.23.7' })).not.toThrow();
         expect(() => validateOptions({ version: '23.45.67' })).not.toThrow();
+      });
+
+      it('accepts versions with leading zeros in minor/patch', () => {
+        // Leading zeros in minor/patch are technically non-standard but commonly used
+        expect(() => validateOptions({ version: '1.01.0' })).not.toThrow();
+        expect(() => validateOptions({ version: '1.0.01' })).not.toThrow();
+        expect(() => validateOptions({ version: '1.01.01' })).not.toThrow();
+        expect(() => validateOptions({ version: '10.001.2' })).not.toThrow();
       });
     });
 
