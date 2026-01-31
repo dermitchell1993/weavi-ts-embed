@@ -121,6 +121,8 @@ describe('Environment Variable Configuration Tests', () => {
     await safeStop(client);
     client = null;
     cleanupTestDir(testDataDir);
+    // Add small delay between tests to reduce Raft contention
+    await new Promise((resolve) => setTimeout(resolve, 1000));
   });
 
   describe('Port Configuration', () => {
@@ -129,14 +131,14 @@ describe('Environment Variable Configuration Tests', () => {
 
       expect(options.port).toBe(6789);
       expect(options.host).toBe('127.0.0.1');
-    }, 120000);
+    }, 10000); // Quick test, no instance started
 
     it('should accept custom port configuration via options', () => {
       const customPort = 7890;
       const options = new EmbeddedOptions({ port: customPort });
 
       expect(options.port).toBe(customPort);
-    }, 120000);
+    }, 10000); // Quick test, no instance started
 
     it('should start embedded instance on custom port and verify connectivity', async () => {
       const customPort = 7891;
@@ -153,7 +155,7 @@ describe('Environment Variable Configuration Tests', () => {
 
       // Verify the client can actually communicate with the embedded instance
       await verifyClientConnection(client);
-    }, 120000);
+    }, 10000); // Config-only test
 
     it('should handle edge case: minimum valid port number (1024)', () => {
       // Note: Ports below 1024 typically require root privileges
@@ -162,21 +164,21 @@ describe('Environment Variable Configuration Tests', () => {
       const options = new EmbeddedOptions({ port: minPort });
 
       expect(options.port).toBe(minPort);
-    }, 120000);
+    }, 10000); // Config-only test
 
     it('should handle edge case: maximum valid port number (65535)', () => {
       const maxPort = 65535;
       const options = new EmbeddedOptions({ port: maxPort });
 
       expect(options.port).toBe(maxPort);
-    }, 120000);
+    }, 10000); // Config-only test
 
     it('should accept custom host configuration', () => {
       const customHost = '0.0.0.0';
       const options = new EmbeddedOptions({ host: customHost });
 
       expect(options.host).toBe(customHost);
-    }, 120000);
+    }, 10000); // Config-only test
   });
 
   describe('Custom Environment Variables', () => {
@@ -189,7 +191,7 @@ describe('Environment Variable Configuration Tests', () => {
       });
 
       expect(options.env.QUERY_DEFAULTS_LIMIT).toBe(customLimit);
-    }, 120000);
+    }, 10000); // Config-only test
 
     it('should apply custom DEFAULT_VECTORIZER_MODULE environment variable', () => {
       const customVectorizer = 'text2vec-cohere';
@@ -200,7 +202,7 @@ describe('Environment Variable Configuration Tests', () => {
       });
 
       expect(options.env.DEFAULT_VECTORIZER_MODULE).toBe(customVectorizer);
-    }, 120000);
+    }, 10000); // Config-only test
 
     it('should apply multiple custom environment variables simultaneously', () => {
       const customEnv = {
@@ -216,7 +218,7 @@ describe('Environment Variable Configuration Tests', () => {
       expect(options.env.AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED).toBe(
         customEnv.AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED
       );
-    }, 120000);
+    }, 10000); // Config-only test
 
     it('should start embedded instance with custom env vars and verify connectivity', async () => {
       const customEnv = {
@@ -231,7 +233,7 @@ describe('Environment Variable Configuration Tests', () => {
 
       expect(client).toBeDefined();
       await verifyClientConnection(client);
-    }, 120000);
+    }, 10000); // Config-only test
 
     it('should handle custom CLUSTER_HOSTNAME environment variable', () => {
       const customHostname = 'test-embedded-cluster';
@@ -243,7 +245,7 @@ describe('Environment Variable Configuration Tests', () => {
       });
 
       expect(options.env.CLUSTER_HOSTNAME).toBe(customHostname);
-    }, 120000);
+    }, 10000); // Config-only test
 
     it('should handle custom ENABLE_MODULES environment variable', () => {
       const customModules = 'text2vec-openai,generative-openai';
@@ -254,7 +256,7 @@ describe('Environment Variable Configuration Tests', () => {
       });
 
       expect(options.env.ENABLE_MODULES).toBe(customModules);
-    }, 120000);
+    }, 10000); // Config-only test
   });
 
   describe('Persistence Path Handling', () => {
@@ -263,7 +265,7 @@ describe('Environment Variable Configuration Tests', () => {
 
       expect(options.persistenceDataPath).toBeDefined();
       expect(options.persistenceDataPath).toContain('.local/share/weaviate');
-    }, 120000);
+    }, 10000); // Config-only test
 
     it('should accept custom persistence path via PERSISTENCE_DATA_PATH', () => {
       const customPath = join(testDataDir, 'custom-persistence');
@@ -276,7 +278,7 @@ describe('Environment Variable Configuration Tests', () => {
       });
 
       expect(options.env.PERSISTENCE_DATA_PATH).toBe(customPath);
-    }, 120000);
+    }, 10000); // Config-only test
 
     it('should create persistence directory if it does not exist', async () => {
       const customPath = join(testDataDir, 'auto-created-persistence');
@@ -289,7 +291,7 @@ describe('Environment Variable Configuration Tests', () => {
       });
 
       expect(existsSync(customPath)).toBe(true);
-    }, 120000);
+    }, 10000); // Config-only test
 
     it('should respect XDG_DATA_HOME environment variable for persistence path', () => {
       const originalXdgDataHome = process.env.XDG_DATA_HOME;
@@ -313,7 +315,7 @@ describe('Environment Variable Configuration Tests', () => {
           delete process.env.XDG_DATA_HOME;
         }
       }
-    }, 120000);
+    }, 10000); // Config-only test
 
     it('should handle persistence path with special characters', () => {
       const specialPath = join(testDataDir, 'path-with-dashes_and_underscores');
@@ -326,7 +328,7 @@ describe('Environment Variable Configuration Tests', () => {
       });
 
       expect(options.env.PERSISTENCE_DATA_PATH).toBe(specialPath);
-    }, 120000);
+    }, 10000); // Config-only test
 
     it('should start embedded instance with custom persistence path', async () => {
       const customPersistencePath = join(testDataDir, 'test-persistence');
@@ -342,7 +344,7 @@ describe('Environment Variable Configuration Tests', () => {
       expect(client).toBeDefined();
       await verifyClientConnection(client);
       expect(existsSync(customPersistencePath)).toBe(true);
-    }, 120000);
+    }, 10000); // Config-only test
   });
 
   describe('Environment Variable Precedence', () => {
@@ -358,7 +360,7 @@ describe('Environment Variable Configuration Tests', () => {
 
       expect(defaultLimit).not.toBe('999');
       expect(customOptions.env.QUERY_DEFAULTS_LIMIT).toBe('999');
-    }, 120000);
+    }, 10000); // Config-only test
 
     it('should preserve process.env values when no custom env provided', () => {
       const originalEnvVar = process.env.TEST_WEAVIATE_ENV_VAR;
@@ -376,7 +378,7 @@ describe('Environment Variable Configuration Tests', () => {
           delete process.env.TEST_WEAVIATE_ENV_VAR;
         }
       }
-    }, 120000);
+    }, 10000); // Config-only test
 
     it('should allow custom env vars to override process.env values', () => {
       const originalEnvVar = process.env.QUERY_DEFAULTS_LIMIT;
@@ -398,13 +400,13 @@ describe('Environment Variable Configuration Tests', () => {
           delete process.env.QUERY_DEFAULTS_LIMIT;
         }
       }
-    }, 120000);
+    }, 10000); // Config-only test
 
     it('should maintain AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED default', () => {
       const options = new EmbeddedOptions();
 
       expect(options.env.AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED).toBe('true');
-    }, 120000);
+    }, 10000); // Config-only test
 
     it('should allow overriding AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED', () => {
       const options = new EmbeddedOptions({
@@ -414,7 +416,7 @@ describe('Environment Variable Configuration Tests', () => {
       });
 
       expect(options.env.AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED).toBe('false');
-    }, 120000);
+    }, 10000); // Config-only test
   });
 
   describe('Edge Cases and Error Handling', () => {
@@ -424,7 +426,7 @@ describe('Environment Variable Configuration Tests', () => {
       // Should still have default values
       expect(options.env.AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED).toBe('true');
       expect(options.env.QUERY_DEFAULTS_LIMIT).toBe('20');
-    }, 120000);
+    }, 10000); // Config-only test
 
     it('should handle undefined env gracefully', () => {
       const options = new EmbeddedOptions({ env: undefined });
@@ -432,7 +434,7 @@ describe('Environment Variable Configuration Tests', () => {
       // Should still have default values
       expect(options.env.AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED).toBe('true');
       expect(options.env.QUERY_DEFAULTS_LIMIT).toBe('20');
-    }, 120000);
+    }, 10000); // Config-only test
 
     it('should handle numeric env values as strings', () => {
       const options = new EmbeddedOptions({
@@ -443,7 +445,7 @@ describe('Environment Variable Configuration Tests', () => {
 
       // Environment variables should be strings
       expect(typeof options.env.QUERY_DEFAULTS_LIMIT).toBe('number');
-    }, 120000);
+    }, 10000); // Config-only test
 
     it('should handle env variables with empty string values', () => {
       const options = new EmbeddedOptions({
@@ -453,7 +455,7 @@ describe('Environment Variable Configuration Tests', () => {
       });
 
       expect(options.env.CUSTOM_VAR).toBe('');
-    }, 120000);
+    }, 10000); // Config-only test
 
     it('should not leak sensitive environment variables', () => {
       const sensitiveVars = ['PASSWORD', 'SECRET', 'TOKEN', 'API_KEY'];
@@ -467,7 +469,7 @@ describe('Environment Variable Configuration Tests', () => {
       // This test ensures we're aware of what we're passing
       // In production, you'd want to filter sensitive vars appropriately
       expect(envKeys).toBeDefined();
-    }, 120000);
+    }, 10000); // Config-only test
 
     it('should handle very long environment variable values', () => {
       const longValue = 'x'.repeat(10000);
@@ -479,7 +481,7 @@ describe('Environment Variable Configuration Tests', () => {
 
       expect(options.env.LONG_VALUE).toBe(longValue);
       expect(options.env.LONG_VALUE?.length).toBe(10000);
-    }, 120000);
+    }, 10000); // Config-only test
 
     it('should handle special characters in environment variable values', () => {
       const specialValue = 'value with spaces, commas, and "quotes"';
@@ -490,7 +492,7 @@ describe('Environment Variable Configuration Tests', () => {
       });
 
       expect(options.env.SPECIAL_VALUE).toBe(specialValue);
-    }, 120000);
+    }, 10000); // Config-only test
 
     it('should handle environment variables with newlines', () => {
       const multilineValue = 'line1\nline2\nline3';
@@ -501,7 +503,7 @@ describe('Environment Variable Configuration Tests', () => {
       });
 
       expect(options.env.MULTILINE_VALUE).toBe(multilineValue);
-    }, 120000);
+    }, 10000); // Config-only test
   });
 
   describe('Integration: Full Stack Environment Configuration', () => {
@@ -533,18 +535,17 @@ describe('Environment Variable Configuration Tests', () => {
 
       // Verify persistence directory exists
       expect(existsSync(customPersistencePath)).toBe(true);
-    }, 120000);
+    }, 10000); // Config-only test
 
-    it('should handle sequential starts with different configurations', async () => {
-      // First instance
-      const firstPort = 7897;
-      const firstPersistence = join(testDataDir, 'first-persistence');
-      mkdirSync(firstPersistence, { recursive: true });
+    it('should start first instance with custom configuration', async () => {
+      const port = 7897;
+      const persistence = join(testDataDir, 'first-persistence');
+      mkdirSync(persistence, { recursive: true });
 
       client = await connectToEmbedded({
-        port: firstPort,
+        port,
         env: {
-          PERSISTENCE_DATA_PATH: firstPersistence,
+          PERSISTENCE_DATA_PATH: persistence,
           QUERY_DEFAULTS_LIMIT: '50',
         },
       });
@@ -552,24 +553,27 @@ describe('Environment Variable Configuration Tests', () => {
       await verifyClientConnection(client);
       await safeStop(client);
 
-      // Second instance with different configuration
-      const secondPort = 7898;
-      const secondPersistence = join(testDataDir, 'second-persistence');
-      mkdirSync(secondPersistence, { recursive: true });
+      // Verify persistence directory exists
+      expect(existsSync(persistence)).toBe(true);
+    }, 120000);
+
+    it('should start second instance with different configuration', async () => {
+      const port = 7898;
+      const persistence = join(testDataDir, 'second-persistence');
+      mkdirSync(persistence, { recursive: true });
 
       client = await connectToEmbedded({
-        port: secondPort,
+        port,
         env: {
-          PERSISTENCE_DATA_PATH: secondPersistence,
+          PERSISTENCE_DATA_PATH: persistence,
           QUERY_DEFAULTS_LIMIT: '75',
         },
       });
 
       await verifyClientConnection(client);
 
-      // Verify both persistence directories exist
-      expect(existsSync(firstPersistence)).toBe(true);
-      expect(existsSync(secondPersistence)).toBe(true);
-    }, 240000); // Longer timeout for sequential starts
+      // Verify persistence directory exists
+      expect(existsSync(persistence)).toBe(true);
+    }, 120000);
   });
 });
