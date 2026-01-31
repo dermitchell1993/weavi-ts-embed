@@ -38,8 +38,8 @@ const UNSUPPORTED_ARCH = {
 
 const ERROR_MESSAGES = {
   WINDOWS: 'Weaviate Embedded is not supported on Windows',
-  UNSUPPORTED_OS: (os: string) => `Unsupported OS: ${os}. Only macOS (darwin) and Linux are supported.`,
-  UNSUPPORTED_ARCH: (arch: string) => `Unsupported architecture: ${arch}. Only arm64 and x64 are supported.`,
+  unsupportedOs: (os: string) => `Unsupported OS: ${os}. Only macOS (darwin) and Linux are supported.`,
+  unsupportedArch: (arch: string) => `Unsupported architecture: ${arch}. Only arm64 and x64 are supported.`,
 } as const;
 
 describe('Platform Detection', () => {
@@ -142,7 +142,7 @@ describe('Platform Detection', () => {
         mockPlatform(UNSUPPORTED_OS.FREEBSD, SUPPORTED_ARCH.X64);
 
         expect(() => detectPlatform(), 'FreeBSD should be rejected as unsupported OS').toThrow(
-          ERROR_MESSAGES.UNSUPPORTED_OS('freebsd')
+          ERROR_MESSAGES.unsupportedOs('freebsd')
         );
       });
 
@@ -150,7 +150,7 @@ describe('Platform Detection', () => {
         mockPlatform(UNSUPPORTED_OS.SUNOS, SUPPORTED_ARCH.ARM64);
 
         expect(() => detectPlatform(), 'SunOS should be rejected as unsupported OS').toThrow(
-          ERROR_MESSAGES.UNSUPPORTED_OS('sunos')
+          ERROR_MESSAGES.unsupportedOs('sunos')
         );
       });
     });
@@ -164,7 +164,7 @@ describe('Platform Detection', () => {
         mockPlatform(SUPPORTED_OS.LINUX, UNSUPPORTED_ARCH.IA32);
 
         expect(() => detectPlatform(), '32-bit (ia32) should be rejected on Linux').toThrow(
-          ERROR_MESSAGES.UNSUPPORTED_ARCH('ia32')
+          ERROR_MESSAGES.unsupportedArch('ia32')
         );
       });
 
@@ -172,7 +172,7 @@ describe('Platform Detection', () => {
         mockPlatform(SUPPORTED_OS.DARWIN, UNSUPPORTED_ARCH.MIPS);
 
         expect(() => detectPlatform(), 'MIPS architecture should be rejected on macOS').toThrow(
-          ERROR_MESSAGES.UNSUPPORTED_ARCH('mips')
+          ERROR_MESSAGES.unsupportedArch('mips')
         );
       });
 
@@ -180,7 +180,7 @@ describe('Platform Detection', () => {
         mockPlatform(SUPPORTED_OS.LINUX, UNSUPPORTED_ARCH.S390);
 
         expect(() => detectPlatform(), 'IBM s390 architecture should be rejected').toThrow(
-          ERROR_MESSAGES.UNSUPPORTED_ARCH('s390')
+          ERROR_MESSAGES.unsupportedArch('s390')
         );
       });
     });
