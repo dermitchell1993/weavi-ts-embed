@@ -330,27 +330,13 @@ export class EmbeddedDB {
         }
 
         // Lock file exists and process is active - wait for binary to appear
-        // Adaptive polling: 100ms for first 10 seconds, then 500ms
-        const maxWait = 120000; // 2 minutes
+        // Exponential backoff: start at 200ms, double each iteration, max 2s
+        const maxWait = 45000; // 45 seconds (reduced from 120s to prevent excessive CI timeouts)
         const startTime = Date.now();
 
         console.log(`Waiting for another process to complete binary download: ${this.options.binaryPath}`);
 
-        // eslint-disable-next-line no-await-in-loop
-        while (!fs.existsSync(`${this.options.binaryPath}`)) {
-          if (Date.now() - startTime > maxWait) {
-            throw new Error(
-              `Timeout waiting for binary download by another process: ${this.options.binaryPath}`
-            );
-          }
-
-          // Adaptive polling: start with 100ms, back off to 500ms after 10 seconds
-          const pollInterval = Date.now() - startTime < 10000 ? 100 : 500;
-
-          // Intentional await in loop for polling
-          // eslint-disable-next-line no-await-in-loop
-          await new Promise((resolve) => setTimeout(resolve, pollInterval));
-        }
+        await this.waitForBinaryWithBackoff(lockFile, maxWait, startTime);
 
         console.log(`Binary ${this.options.binaryPath} downloaded by another process`);
 
@@ -358,6 +344,48 @@ export class EmbeddedDB {
         this.validateBinaryFile(this.options.binaryPath);
       }
     }
+  }
+
+  /**
+   * Wait for binary download with exponential backoff and process liveness checks
+   */
+  private waitForBinaryWithBackoff(lockFile: string, maxWait: number, startTime: number): Promise<void> {
+    const checkAndWait = async (currentInterval: number): Promise<void> => {
+      // Check timeout first
+      if (Date.now() - startTime > maxWait) {
+        throw new Error(
+          `Timeout waiting for binary download by another process: ${this.options.binaryPath} (waited ${maxWait}ms)`
+        );
+      }
+
+      // Check if binary exists
+      if (fs.existsSync(`${this.options.binaryPath}`)) {
+        return;
+      }
+
+      // Check if the downloading process is still alive
+      const lockContent = fs.readFileSync(lockFile, 'utf-8');
+      const lockPid = parseInt(lockContent, 10);
+      if (!isNaN(lockPid)) {
+        try {
+          process.kill(lockPid, 0); // Check if process exists
+        } catch (e: any) {
+          // Process died - remove stale lock and retry
+          if (e.code === 'ESRCH') {
+            console.log(`Downloading process ${lockPid} died, removing stale lock and retrying...`);
+            fs.unlinkSync(lockFile);
+            return this.ensureWeaviateBinaryExists();
+          }
+        }
+      }
+
+      // Wait with exponential backoff and jitter, then recurse
+      const nextInterval = Math.min(currentInterval * 2, 2000);
+      await new Promise((resolve) => setTimeout(resolve, currentInterval + Math.random() * 50));
+      return checkAndWait(nextInterval);
+    };
+
+    return checkAndWait(200); // Start with 200ms
   }
 
   private ensurePathsExist() {
