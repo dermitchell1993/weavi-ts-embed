@@ -84,9 +84,20 @@ export class EmbeddedOptions {
     if (cfg.version == 'latest') {
       return 'latest';
     }
-    // Match semantic versions: major.minor.patch (with optional suffix like -alpha.0)
-    // Major: 1-9 followed by any digits, Minor/Patch: one or more digits each
-    if (cfg.version.match(/^[1-9]\d*\.\d+\.\d+/)) {
+    // Improved regex that accepts:
+    // - Major version: 1-9 with optional additional digits (e.g., 1, 2, 10, 23)
+    // - Minor version: any digits including 0, 10, 20, etc. (e.g., 0, 5, 10, 20)
+    // - Patch version: any digits (e.g., 0, 1, 15)
+    // - Optional pre-release: -alpha.1, -beta.2, -rc.1, etc.
+    // - Optional build metadata: +20230615, +build.123, etc.
+    // Uses anchors (^ and $) to match the entire string, not substrings
+    if (cfg.version.match(/^[1-9]\d*\.\d+\.\d+(-[\w.]+)?(\+[\w.]+)?$/)) {
+      // Additional security check: reject path traversal attempts
+      if (cfg.version.includes('..') || cfg.version.includes('/') || cfg.version.includes('\\')) {
+        throw new Error(
+          `invalid version: ${cfg.version}. version contains invalid characters (path traversal attempt detected)`
+        );
+      }
       return cfg.version;
     }
     throw new Error(
