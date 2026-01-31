@@ -46,6 +46,9 @@ export * from './platform';
 // Export v3 type definitions (explicitly exported to document v3 migration types)
 export type { BinaryInfo, ProcessConfig, HealthCheckConfig } from './types';
 
+// Export Wave 1 modules
+export * from './process-manager';
+
 // Export configuration validator utilities (Wave 1.5: Config Validator)
 export {
   validateOptions,
