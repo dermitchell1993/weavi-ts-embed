@@ -232,18 +232,58 @@ export class EmbeddedDB {
   }
 
   private async ensureWeaviateBinaryExists() {
+    // Double-check locking pattern to prevent concurrent downloads
     if (!fs.existsSync(`${this.options.binaryPath}`)) {
-      console.log(
-        `Binary ${this.options.binaryPath} does not exist.`,
-        `Downloading binary for version ${this.options.version || this.options.binaryPath}`
-      );
-      await this.downloadBinary().then(async (downloadPath) => {
-        if (downloadPath.endsWith('tgz')) {
-          await this.untarBinary(downloadPath);
-        } else {
-          await this.unzipBinary(downloadPath);
+      const lockFile = `${this.options.binaryPath}.lock`;
+
+      // Try to acquire lock by creating lock file atomically
+      try {
+        // wx flag: open for writing, fail if exists (atomic)
+        fs.writeFileSync(lockFile, process.pid.toString(), { flag: 'wx' });
+
+        try {
+          // Re-check after acquiring lock (another process may have downloaded it)
+          if (!fs.existsSync(`${this.options.binaryPath}`)) {
+            console.log(
+              `Binary ${this.options.binaryPath} does not exist.`,
+              `Downloading binary for version ${this.options.version || this.options.binaryPath}`
+            );
+            await this.downloadBinary().then(async (downloadPath) => {
+              if (downloadPath.endsWith('tgz')) {
+                await this.untarBinary(downloadPath);
+              } else {
+                await this.unzipBinary(downloadPath);
+              }
+            });
+          }
+        } finally {
+          // Always release lock
+          try {
+            fs.unlinkSync(lockFile);
+          } catch (e) {
+            // Ignore errors during lock cleanup
+          }
         }
-      });
+      } catch (err: any) {
+        // Lock file exists - another process is downloading
+        // Wait for binary to appear (poll every 500ms, max 2 minutes)
+        const maxWait = 120000; // 2 minutes
+        const pollInterval = 500; // 500ms
+        const startTime = Date.now();
+
+        // eslint-disable-next-line no-await-in-loop
+        while (!fs.existsSync(`${this.options.binaryPath}`)) {
+          if (Date.now() - startTime > maxWait) {
+            throw new Error(
+              `Timeout waiting for binary download by another process: ${this.options.binaryPath}`
+            );
+          }
+          // Intentional await in loop for polling
+          // eslint-disable-next-line no-await-in-loop
+          await new Promise((resolve) => setTimeout(resolve, pollInterval));
+        }
+        console.log(`Binary ${this.options.binaryPath} downloaded by another process`);
+      }
     }
   }
 
