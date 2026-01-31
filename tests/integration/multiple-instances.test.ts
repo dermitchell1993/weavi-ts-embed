@@ -29,7 +29,11 @@ import { join } from 'path';
  * Starts from 8001 and increments to avoid collisions
  */
 let nextPort = 8001;
-const allocatePort = (): number => nextPort++;
+const allocatePort = (): number => {
+  const port = nextPort;
+  nextPort += 1;
+  return port;
+};
 
 /**
  * Helper to verify a process is actually running by PID
@@ -53,6 +57,7 @@ const waitForProcessTermination = async (pid: number, maxWaitMs = 5000): Promise
     if (!isProcessRunning(pid)) {
       return true;
     }
+    // eslint-disable-next-line no-await-in-loop
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
   return false;
@@ -161,9 +166,7 @@ describe('Multiple Instances Tests', () => {
 
       const pids = [client1.embedded.pid, client2.embedded.pid, client3.embedded.pid];
       const uniquePids = new Set(pids);
-      expect(uniquePids.size, `All 3 instances should have unique PIDs, got: ${pids.join(', ')}`).toBe(
-        3
-      );
+      expect(uniquePids.size, `All 3 instances should have unique PIDs, got: ${pids.join(', ')}`).toBe(3);
 
       // Verify all processes are actually running
       pids.forEach((pid) => {
@@ -171,11 +174,7 @@ describe('Multiple Instances Tests', () => {
       });
 
       // Verify all are ready
-      const readyStates = await Promise.all([
-        client1.isReady(),
-        client2.isReady(),
-        client3.isReady(),
-      ]);
+      const readyStates = await Promise.all([client1.isReady(), client2.isReady(), client3.isReady()]);
       expect(
         readyStates.every((ready) => ready === true),
         `All 3 instances should be ready, got states: ${readyStates.join(', ')}`
@@ -201,22 +200,13 @@ describe('Multiple Instances Tests', () => {
       expect(client4.embedded.pid, 'Client 4 should have a valid PID').toBeGreaterThan(0);
 
       // Verify all have unique PIDs
-      const pids = [
-        client1.embedded.pid,
-        client2.embedded.pid,
-        client3.embedded.pid,
-        client4.embedded.pid,
-      ];
+      const pids = [client1.embedded.pid, client2.embedded.pid, client3.embedded.pid, client4.embedded.pid];
       const uniquePids = new Set(pids);
-      expect(uniquePids.size, `All 4 instances should have unique PIDs, got: ${pids.join(', ')}`).toBe(
-        4
-      );
+      expect(uniquePids.size, `All 4 instances should have unique PIDs, got: ${pids.join(', ')}`).toBe(4);
 
       // Verify all processes are running
       pids.forEach((pid, index) => {
-        expect(isProcessRunning(pid), `Client ${index + 1} (PID ${pid}) should be running`).toBe(
-          true
-        );
+        expect(isProcessRunning(pid), `Client ${index + 1} (PID ${pid}) should be running`).toBe(true);
       });
 
       // Verify all are ready
@@ -226,10 +216,7 @@ describe('Multiple Instances Tests', () => {
         client3.isReady(),
         client4.isReady(),
       ]);
-      expect(
-        ready1 && ready2 && ready3 && ready4,
-        'All 4 clients should be ready'
-      ).toBe(true);
+      expect(ready1 && ready2 && ready3 && ready4, 'All 4 clients should be ready').toBe(true);
     }, 240000);
   });
 
@@ -247,18 +234,11 @@ describe('Multiple Instances Tests', () => {
       trackClient(client2);
 
       // Verify port configuration
-      expect(
-        client1.embedded.options.port,
-        `Client 1 should be configured on port ${port1}`
-      ).toBe(port1);
-      expect(
-        client2.embedded.options.port,
-        `Client 2 should be configured on port ${port2}`
-      ).toBe(port2);
-      expect(
-        client1.embedded.options.port,
-        'Clients should be on different ports'
-      ).not.toBe(client2.embedded.options.port);
+      expect(client1.embedded.options.port, `Client 1 should be configured on port ${port1}`).toBe(port1);
+      expect(client2.embedded.options.port, `Client 2 should be configured on port ${port2}`).toBe(port2);
+      expect(client1.embedded.options.port, 'Clients should be on different ports').not.toBe(
+        client2.embedded.options.port
+      );
 
       // Verify both are accessible on their respective ports
       const [ready1, ready2] = await Promise.all([client1.isReady(), client2.isReady()]);
@@ -270,10 +250,7 @@ describe('Multiple Instances Tests', () => {
       const port = allocatePort();
 
       const client1 = trackClient(await connectToEmbedded({ port }));
-      expect(
-        client1.embedded.pid,
-        'First instance should start successfully'
-      ).toBeGreaterThan(0);
+      expect(client1.embedded.pid, 'First instance should start successfully').toBeGreaterThan(0);
       expect(
         isProcessRunning(client1.embedded.pid),
         `First instance (PID ${client1.embedded.pid}) should be running on port ${port}`
@@ -467,10 +444,7 @@ describe('Multiple Instances Tests', () => {
         { properties: { value: 3 } },
       ]);
 
-      await collection2.data.insertMany([
-        { properties: { value: 10 } },
-        { properties: { value: 20 } },
-      ]);
+      await collection2.data.insertMany([{ properties: { value: 10 } }, { properties: { value: 20 } }]);
 
       // Perform concurrent reads
       const reads = await Promise.all([
@@ -544,7 +518,9 @@ describe('Multiple Instances Tests', () => {
       const count = 5;
 
       // Create instances rapidly
+      // eslint-disable-next-line no-plusplus
       for (let i = 0; i < count; i++) {
+        // eslint-disable-next-line no-await-in-loop
         const client = trackClient(await connectToEmbedded({ port: startPort + i }));
         instances.push(client);
         expect(client.embedded.pid).toBeGreaterThan(0);
