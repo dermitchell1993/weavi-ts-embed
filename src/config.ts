@@ -96,17 +96,39 @@ function validateVersion(version: string): void {
   if (typeof version !== 'string') {
     throw new ConfigValidationError('Version must be a string', 'version');
   }
-  if (version !== 'latest') {
-    // Semantic version format: {major}.{minor}.{patch}
-    // Match patterns like: 0.1.0, 1.23.7, 1.2.3, 10.20.30
-    // Follows semver spec which allows 0.x.x for early-stage software
-    const versionPattern = /^\d+\.\d+\.\d+$/;
-    if (!versionPattern.test(version)) {
-      throw new ConfigValidationError(
-        "Version must be 'latest' or follow semantic versioning format: {major}.{minor}.{patch}",
-        'version'
-      );
-    }
+
+  if (version === 'latest') {
+    return;
+  }
+
+  // Check for path traversal attempts FIRST (including URL-encoded variants)
+  // Defense-in-depth: decode once to catch URL-encoded path traversal attempts
+  // e.g., '1.23.0%2F..%2F..%2Ftmp' would decode to '1.23.0/../../tmp'
+  let decodedVersion: string;
+  try {
+    decodedVersion = decodeURIComponent(version);
+  } catch {
+    // If decoding fails, use original version (malformed encoding is suspicious)
+    decodedVersion = version;
+  }
+
+  if (decodedVersion.includes('..') || decodedVersion.includes('/') || decodedVersion.includes('\\')) {
+    throw new ConfigValidationError(
+      'Version contains invalid characters (path traversal attempt detected)',
+      'version'
+    );
+  }
+
+  // Semantic version format: {major}.{minor}.{patch}
+  // Match patterns like: 0.1.0, 1.23.7, 1.2.3, 10.20.30
+  // Follows semver spec which allows 0.x.x for early-stage software
+  // Anchored regex ensures entire string matches (not just substring)
+  const versionPattern = /^(0|[1-9]\d*)\.\d+\.\d+$/;
+  if (!versionPattern.test(version)) {
+    throw new ConfigValidationError(
+      "Version must be 'latest' or follow semantic versioning format: {major}.{minor}.{patch}",
+      'version'
+    );
   }
 }
 
