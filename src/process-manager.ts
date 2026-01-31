@@ -315,7 +315,7 @@ export class WeaviateProcess {
   kill(): Promise<void> {
     if (!this.isRunning() || !this.process) {
       console.log('[WeaviateProcess] No process to kill');
-      return;
+      return Promise.resolve();
     }
 
     const verbose = this.config?.verbose ?? false;
