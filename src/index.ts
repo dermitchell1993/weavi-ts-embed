@@ -80,6 +80,10 @@ export async function connectToEmbedded(options?: ConnectToEmbeddedOptions): Pro
     // This can throw if: binary download fails, health check times out, port already in use
     await embeddedDB.start();
 
+    // Give the system a moment to fully stabilize after Raft election
+    // This prevents "connection refused" errors in CI environments
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
     // Connect using the official v3 client with connectToLocal()
     // The embedded instance runs on localhost by default
     // gRPC port defaults to 50051 but can be customized
