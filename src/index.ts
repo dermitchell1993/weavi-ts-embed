@@ -14,6 +14,17 @@ export interface EmbeddedClient extends WeaviateClient {
 }
 
 /**
+ * Options for connecting to an embedded Weaviate instance
+ */
+export interface ConnectToEmbeddedOptions extends EmbeddedOptionsConfig {
+  /**
+   * gRPC port for the embedded Weaviate instance
+   * @default 50051
+   */
+  grpcPort?: number;
+}
+
+/**
  * Connect to an embedded Weaviate instance with the official v3 client.
  *
  * This is the main factory function for Wave 1 that wraps the embedded
@@ -25,8 +36,14 @@ export interface EmbeddedClient extends WeaviateClient {
  * 3. Wait for the health check to confirm the instance is ready
  * 4. Return a WeaviateClient v3 instance connected via connectToLocal()
  *
+ * Error Handling:
+ * - Throws if binary download fails (network, disk space, permissions)
+ * - Throws if health check times out (binary won't start, port conflicts)
+ * - Throws if connection to Weaviate fails (configuration issues)
+ *
  * @param options - Optional configuration for the embedded Weaviate instance
  * @returns Promise resolving to a WeaviateClient v3 instance with embedded DB management
+ * @throws Error if binary cannot be downloaded, started, or connected to
  *
  * @example
  * ```typescript
@@ -39,6 +56,7 @@ export interface EmbeddedClient extends WeaviateClient {
  * const client = await connectToEmbedded({
  *   host: '127.0.0.1',
  *   port: 8080,
+ *   grpcPort: 50052,
  *   version: '1.23.7'
  * });
  *
@@ -50,31 +68,40 @@ export interface EmbeddedClient extends WeaviateClient {
  * client.embedded.stop();
  * ```
  */
-export async function connectToEmbedded(options?: EmbeddedOptionsConfig): Promise<EmbeddedClient> {
-  // Initialize embedded options with defaults
-  const embeddedOptions = new EmbeddedOptions(options);
+export async function connectToEmbedded(options?: ConnectToEmbeddedOptions): Promise<EmbeddedClient> {
+  try {
+    // Initialize embedded options with defaults
+    const embeddedOptions = new EmbeddedOptions(options);
 
-  // Create the embedded database instance
-  const embeddedDB = new EmbeddedDB(embeddedOptions);
+    // Create the embedded database instance
+    const embeddedDB = new EmbeddedDB(embeddedOptions);
 
-  // Start the binary and wait for health check
-  await embeddedDB.start();
+    // Start the binary and wait for health check
+    // This can throw if: binary download fails, health check times out, port already in use
+    await embeddedDB.start();
 
-  // Connect using the official v3 client with connectToLocal()
-  // The embedded instance runs on localhost by default
-  const client = await weaviate.connectToLocal({
-    host: embeddedOptions.host,
-    port: embeddedOptions.port,
-    grpcPort: 50051, // Default gRPC port for embedded Weaviate
-  });
+    // Connect using the official v3 client with connectToLocal()
+    // The embedded instance runs on localhost by default
+    // gRPC port defaults to 50051 but can be customized
+    const grpcPort = options?.grpcPort ?? 50051;
+    const client = await weaviate.connectToLocal({
+      host: embeddedOptions.host,
+      port: embeddedOptions.port,
+      grpcPort,
+    });
 
-  // Extend the client with embedded DB management
-  const embeddedClient: EmbeddedClient = {
-    ...client,
-    embedded: embeddedDB,
-  };
+    // Extend the client with embedded DB management
+    const embeddedClient: EmbeddedClient = {
+      ...client,
+      embedded: embeddedDB,
+    };
 
-  return embeddedClient;
+    return embeddedClient;
+  } catch (error) {
+    // Re-throw with more context for debugging
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to connect to embedded Weaviate: ${errorMessage}`);
+  }
 }
 
 // Legacy API - preserved for backward compatibility
