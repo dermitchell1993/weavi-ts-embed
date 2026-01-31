@@ -231,6 +231,60 @@ export class EmbeddedDB {
     });
   }
 
+  /**
+   * Checks if a lock file is stale (held by a crashed process)
+   * Returns true if stale lock was detected and removed
+   */
+  private checkAndRemoveStaleLock(lockFile: string): boolean {
+    if (!fs.existsSync(lockFile)) {
+      return false;
+    }
+
+    try {
+      const lockContent = fs.readFileSync(lockFile, 'utf-8');
+      const lockPid = parseInt(lockContent, 10);
+
+      if (isNaN(lockPid)) {
+        return false;
+      }
+
+      // Check if the process is still alive (signal 0 = check existence)
+      try {
+        process.kill(lockPid, 0);
+        console.log(`Lock held by active process PID ${lockPid}`);
+        return false;
+      } catch (e: any) {
+        // Process doesn't exist - stale lock detected
+        if (e.code === 'ESRCH') {
+          console.log(`Detected stale lock from PID ${lockPid}, removing...`);
+          fs.unlinkSync(lockFile);
+          return true;
+        }
+        // Other errors (EPERM, etc.) - process may still be alive
+        console.log(`Unable to check process ${lockPid}: ${e.code || e.message}`);
+        return false;
+      }
+    } catch (readErr) {
+      console.log(`Unable to read lock file for stale lock detection: ${readErr}`);
+      return false;
+    }
+  }
+
+  /**
+   * Validates that a binary file is not corrupted or incomplete
+   */
+  private validateBinaryFile(binaryPath: string): void {
+    try {
+      const stats = fs.statSync(binaryPath);
+      if (stats.size === 0) {
+        throw new Error(`Binary downloaded but is empty (0 bytes): ${binaryPath}`);
+      }
+      console.log(`Binary validated: ${stats.size} bytes`);
+    } catch (statErr: any) {
+      throw new Error(`Binary validation failed after download: ${statErr.message || statErr}`);
+    }
+  }
+
   private async ensureWeaviateBinaryExists() {
     // Double-check locking pattern to prevent concurrent downloads
     if (!fs.existsSync(`${this.options.binaryPath}`)) {
@@ -265,11 +319,22 @@ export class EmbeddedDB {
           }
         }
       } catch (err: any) {
-        // Lock file exists - another process is downloading
-        // Wait for binary to appear (poll every 500ms, max 2 minutes)
+        // Lock acquisition failed - log error details for debugging
+        console.log(`Lock acquisition failed: ${err.code || err.message}`);
+
+        // Check for stale lock file (process crashed while holding lock)
+        const staleLockRemoved = this.checkAndRemoveStaleLock(lockFile);
+        if (staleLockRemoved) {
+          // Recursively retry lock acquisition once after removing stale lock
+          return this.ensureWeaviateBinaryExists();
+        }
+
+        // Lock file exists and process is active - wait for binary to appear
+        // Adaptive polling: 100ms for first 10 seconds, then 500ms
         const maxWait = 120000; // 2 minutes
-        const pollInterval = 500; // 500ms
         const startTime = Date.now();
+
+        console.log(`Waiting for another process to complete binary download: ${this.options.binaryPath}`);
 
         // eslint-disable-next-line no-await-in-loop
         while (!fs.existsSync(`${this.options.binaryPath}`)) {
@@ -278,11 +343,19 @@ export class EmbeddedDB {
               `Timeout waiting for binary download by another process: ${this.options.binaryPath}`
             );
           }
+
+          // Adaptive polling: start with 100ms, back off to 500ms after 10 seconds
+          const pollInterval = Date.now() - startTime < 10000 ? 100 : 500;
+
           // Intentional await in loop for polling
           // eslint-disable-next-line no-await-in-loop
           await new Promise((resolve) => setTimeout(resolve, pollInterval));
         }
+
         console.log(`Binary ${this.options.binaryPath} downloaded by another process`);
+
+        // Verify the binary is valid (not corrupted or incomplete)
+        this.validateBinaryFile(this.options.binaryPath);
       }
     }
   }
