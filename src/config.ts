@@ -119,14 +119,18 @@ function validateVersion(version: string): void {
     );
   }
 
-  // Semantic version format: {major}.{minor}.{patch}
+  // Semantic version format: {major}.{minor}.{patch}[-prerelease][+build]
   // Match patterns like: 0.1.0, 1.23.7, 1.2.3, 10.20.30
+  // Pre-release examples: 1.0.0-alpha, 1.0.0-beta.2, 1.0.0-rc.1
+  // Build metadata examples: 1.0.0+build.1, 1.0.0+20230615
+  // Combined: 1.0.0-rc.1+build.123
   // Follows semver spec which allows 0.x.x for early-stage software
   // Anchored regex ensures entire string matches (not just substring)
-  const versionPattern = /^(0|[1-9]\d*)\.\d+\.\d+$/;
+  const versionPattern = /^(0|[1-9]\d*)\.\d+\.\d+(-[\w.]+)?(\+[\w.]+)?$/;
   if (!versionPattern.test(version)) {
     throw new ConfigValidationError(
-      "Version must be 'latest' or follow semantic versioning format: {major}.{minor}.{patch}",
+      "Version must be 'latest' or follow semantic versioning format: " +
+        '{major}.{minor}.{patch}[-prerelease][+build]',
       'version'
     );
   }
