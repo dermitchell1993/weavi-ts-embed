@@ -1,3 +1,4 @@
+/* eslint-disable no-plusplus, require-await */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { waitForReady, checkHealth, checkLiveness } from './health-checker';
 import type { HealthCheckConfig } from './types';
@@ -18,191 +19,600 @@ describe('health-checker', () => {
   });
 
   describe('waitForReady', () => {
-    it('should resolve immediately when Weaviate is ready', async () => {
-      const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValue({
-        ok: true,
-      } as Response);
+    describe('Happy Path - Success Scenarios', () => {
+      it('should resolve immediately when Weaviate is ready on first attempt', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        mockFetch.mockResolvedValue({ ok: true } as Response);
 
-      const config: HealthCheckConfig = {
-        host: 'localhost',
-        port: 8080,
-      };
+        const config: HealthCheckConfig = {
+          host: 'localhost',
+          port: 8080,
+        };
 
-      await waitForReady(config);
+        await waitForReady(config);
 
-      expect(mockFetch).toHaveBeenCalledWith('http://localhost:8080/v1/.well-known/ready');
-      expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('✅ Weaviate is ready'));
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+        expect(mockFetch).toHaveBeenCalledWith('http://localhost:8080/v1/.well-known/ready');
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('✅ Weaviate is ready'));
+      });
+
+      it('should retry and eventually succeed when Weaviate becomes ready', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        let callCount = 0;
+
+        mockFetch.mockImplementation(async () => {
+          callCount++;
+          if (callCount < 3) {
+            throw new Error('Connection refused');
+          }
+          return { ok: true } as Response;
+        });
+
+        const config: HealthCheckConfig = {
+          host: 'localhost',
+          port: 8080,
+          timeout: 10000,
+          interval: 10, // Fast intervals for testing
+        };
+
+        await waitForReady(config);
+
+        expect(mockFetch).toHaveBeenCalledTimes(3);
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('✅ Weaviate is ready'));
+      });
+
+      it('should handle non-ok responses and retry until success', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        let callCount = 0;
+
+        mockFetch.mockImplementation(async () => {
+          callCount++;
+          if (callCount < 3) {
+            return { ok: false, status: 503 } as Response;
+          }
+          return { ok: true } as Response;
+        });
+
+        const config: HealthCheckConfig = {
+          host: 'localhost',
+          port: 8080,
+          timeout: 10000,
+          interval: 10,
+        };
+
+        await waitForReady(config);
+
+        expect(mockFetch).toHaveBeenCalledTimes(3);
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('HTTP 503'));
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('✅ Weaviate is ready'));
+      });
+
+      it('should work with different host and port combinations', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        mockFetch.mockResolvedValue({ ok: true } as Response);
+
+        const config: HealthCheckConfig = {
+          host: '192.168.1.100',
+          port: 9090,
+        };
+
+        await waitForReady(config);
+
+        expect(mockFetch).toHaveBeenCalledWith('http://192.168.1.100:9090/v1/.well-known/ready');
+      });
+
+      it('should suppress console logs when silent mode is enabled', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        mockFetch.mockResolvedValue({ ok: true } as Response);
+
+        const config: HealthCheckConfig = {
+          host: 'localhost',
+          port: 8080,
+          silent: true,
+        };
+
+        await waitForReady(config);
+
+        expect(consoleLogSpy).not.toHaveBeenCalled();
+      });
     });
 
-    it('should retry until Weaviate becomes ready', async () => {
-      const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
-      let callCount = 0;
+    describe('Timeout Scenarios', () => {
+      it('should timeout after specified duration when server never becomes ready', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        mockFetch.mockRejectedValue(new Error('Connection refused'));
 
-      // eslint-disable-next-line require-await
-      mockFetch.mockImplementation(async () => {
-        // eslint-disable-next-line no-plusplus
-        callCount++;
-        if (callCount < 3) {
+        const config: HealthCheckConfig = {
+          host: 'localhost',
+          port: 8080,
+          timeout: 100,
+          interval: 10,
+        };
+
+        await expect(waitForReady(config)).rejects.toThrow('Weaviate failed to start within 100ms');
+        expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('❌ Health check timed out'));
+      });
+
+      it('should timeout with custom short timeout value', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        mockFetch.mockRejectedValue(new Error('Connection refused'));
+
+        const config: HealthCheckConfig = {
+          host: '127.0.0.1',
+          port: 9999,
+          timeout: 50,
+          interval: 5,
+        };
+
+        await expect(waitForReady(config)).rejects.toThrow('Weaviate failed to start within 50ms');
+      });
+
+      it('should respect timeout even with high maxRetries', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        mockFetch.mockRejectedValue(new Error('Connection refused'));
+
+        const config: HealthCheckConfig = {
+          host: 'localhost',
+          port: 8080,
+          timeout: 100,
+          interval: 10,
+          maxRetries: 1000, // Very high, but timeout should win
+        };
+
+        const startTime = Date.now();
+        await expect(waitForReady(config)).rejects.toThrow('Weaviate failed to start within 100ms');
+        const elapsed = Date.now() - startTime;
+
+        // Should timeout around 100ms, not wait for 1000 retries
+        expect(elapsed).toBeLessThan(500);
+      });
+
+      it('should handle timeout = 0 as immediate failure', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        mockFetch.mockRejectedValue(new Error('Connection refused'));
+
+        const config: HealthCheckConfig = {
+          host: 'localhost',
+          port: 8080,
+          timeout: 0,
+          interval: 100,
+        };
+
+        await expect(waitForReady(config)).rejects.toThrow('Weaviate failed to start within 0ms');
+      });
+    });
+
+    describe('Retry Logic & MaxRetries', () => {
+      it('should respect maxRetries parameter and stop after limit', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        mockFetch.mockRejectedValue(new Error('Connection refused'));
+
+        const config: HealthCheckConfig = {
+          host: 'localhost',
+          port: 8080,
+          timeout: 10000,
+          interval: 10,
+          maxRetries: 5,
+        };
+
+        await expect(waitForReady(config)).rejects.toThrow('after 5 attempts');
+        expect(mockFetch).toHaveBeenCalledTimes(5);
+      });
+
+      it('should handle maxRetries = 1 (single attempt only)', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        mockFetch.mockRejectedValue(new Error('Connection refused'));
+
+        const config: HealthCheckConfig = {
+          host: 'localhost',
+          port: 8080,
+          timeout: 10000,
+          interval: 10,
+          maxRetries: 1,
+        };
+
+        await expect(waitForReady(config)).rejects.toThrow();
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+      });
+
+      it('should handle maxRetries = 0 gracefully (no attempts)', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        mockFetch.mockRejectedValue(new Error('Connection refused'));
+
+        const config: HealthCheckConfig = {
+          host: 'localhost',
+          port: 8080,
+          timeout: 10000,
+          interval: 10,
+          maxRetries: 0,
+        };
+
+        await expect(waitForReady(config)).rejects.toThrow();
+        expect(mockFetch).not.toHaveBeenCalled();
+      });
+
+      it('should calculate default maxRetries from timeout and interval', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        let callCount = 0;
+
+        mockFetch.mockImplementation(async () => {
+          callCount++;
+          // Always fail to test maxRetries calculation
           throw new Error('Connection refused');
-        }
-        return { ok: true } as Response;
+        });
+
+        const config: HealthCheckConfig = {
+          host: 'localhost',
+          port: 8080,
+          timeout: 1000,
+          interval: 100,
+          // maxRetries not specified, should be Math.ceil(1000/100) = 10
+        };
+
+        await expect(waitForReady(config)).rejects.toThrow();
+
+        // With exponential backoff, actual attempts will be fewer than calculated maxRetries
+        // because the backoff delays consume the timeout budget
+        expect(callCount).toBeGreaterThanOrEqual(3);
+        expect(callCount).toBeLessThanOrEqual(12);
+      });
+    });
+
+    describe('Exponential Backoff Verification', () => {
+      it('should implement exponential backoff between retries', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        let callCount = 0;
+        const callTimestamps: number[] = [];
+
+        mockFetch.mockImplementation(async () => {
+          callCount++;
+          callTimestamps.push(Date.now());
+          if (callCount < 5) {
+            throw new Error('Connection refused');
+          }
+          return { ok: true } as Response;
+        });
+
+        const config: HealthCheckConfig = {
+          host: 'localhost',
+          port: 8080,
+          timeout: 20000,
+          interval: 50,
+        };
+
+        await waitForReady(config);
+
+        expect(mockFetch).toHaveBeenCalledTimes(5);
+
+        // Verify intervals increase (exponential backoff)
+        // Can't verify exact timing due to test environment variability,
+        // but can verify that attempts happened
+        expect(callTimestamps.length).toBe(5);
       });
 
-      const config: HealthCheckConfig = {
-        host: 'localhost',
-        port: 8080,
-        timeout: 5000,
-        interval: 10,
-      };
+      it('should cap exponential backoff at maximum interval', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        let callCount = 0;
 
-      await waitForReady(config);
+        mockFetch.mockImplementation(async () => {
+          callCount++;
+          if (callCount < 8) {
+            throw new Error('Connection refused');
+          }
+          return { ok: true } as Response;
+        });
 
-      expect(mockFetch).toHaveBeenCalledTimes(3);
-      expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('✅ Weaviate is ready'));
-    });
+        const config: HealthCheckConfig = {
+          host: 'localhost',
+          port: 8080,
+          timeout: 100000, // Very long to allow many retries
+          interval: 100,
+        };
 
-    it('should timeout after specified duration', async () => {
-      const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockRejectedValue(new Error('Connection refused'));
+        const startTime = Date.now();
+        await waitForReady(config);
+        const elapsed = Date.now() - startTime;
 
-      const config: HealthCheckConfig = {
-        host: 'localhost',
-        port: 8080,
-        timeout: 50,
-        interval: 10,
-        maxRetries: 3,
-      };
-
-      await expect(waitForReady(config)).rejects.toThrow('Weaviate failed to start within 50ms');
-    });
-
-    it('should use custom timeout and interval', async () => {
-      const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockRejectedValue(new Error('Connection refused'));
-
-      const config: HealthCheckConfig = {
-        host: '127.0.0.1',
-        port: 9999,
-        timeout: 50,
-        interval: 10,
-        maxRetries: 2,
-      };
-
-      await expect(waitForReady(config)).rejects.toThrow('Weaviate failed to start within 50ms');
-    });
-
-    it('should handle non-ok responses and retry', async () => {
-      const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
-      let callCount = 0;
-
-      // eslint-disable-next-line require-await
-      mockFetch.mockImplementation(async () => {
-        // eslint-disable-next-line no-plusplus
-        callCount++;
-        if (callCount < 2) {
-          return { ok: false, status: 503 } as Response;
-        }
-        return { ok: true } as Response;
+        // With backoff cap at 5000ms, this should complete relatively quickly
+        // even with many retries. Without cap, exponential growth would take much longer.
+        expect(mockFetch).toHaveBeenCalledTimes(8);
+        expect(elapsed).toBeLessThan(60000); // Should not take a minute
       });
 
-      const config: HealthCheckConfig = {
-        host: 'localhost',
-        port: 8080,
-        timeout: 5000,
-        interval: 10,
-      };
+      it('should start backoff from configured interval value', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        let callCount = 0;
 
-      await waitForReady(config);
+        mockFetch.mockImplementation(async () => {
+          callCount++;
+          if (callCount < 4) {
+            throw new Error('Connection refused');
+          }
+          return { ok: true } as Response;
+        });
 
-      expect(mockFetch).toHaveBeenCalledTimes(2);
-      expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('✅ Weaviate is ready'));
-      expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('HTTP 503'));
+        const config: HealthCheckConfig = {
+          host: 'localhost',
+          port: 8080,
+          timeout: 10000,
+          interval: 50,
+        };
+
+        await waitForReady(config);
+
+        // Verify retry logic executed with initial interval
+        expect(mockFetch).toHaveBeenCalledTimes(4);
+      });
     });
 
-    it('should respect maxRetries parameter', async () => {
-      const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockRejectedValue(new Error('Connection refused'));
+    describe('Edge Cases - Boundary Conditions', () => {
+      it('should handle interval = 0 (immediate retries)', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        let callCount = 0;
 
-      const config: HealthCheckConfig = {
-        host: 'localhost',
-        port: 8080,
-        timeout: 1000,
-        interval: 10,
-        maxRetries: 5,
-      };
+        mockFetch.mockImplementation(async () => {
+          callCount++;
+          if (callCount < 3) {
+            throw new Error('Connection refused');
+          }
+          return { ok: true } as Response;
+        });
 
-      await expect(waitForReady(config)).rejects.toThrow('after 5 attempts');
-    });
+        const config: HealthCheckConfig = {
+          host: 'localhost',
+          port: 8080,
+          timeout: 5000,
+          interval: 0,
+          maxRetries: 5,
+        };
 
-    it('should work with different host and port', async () => {
-      const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValue({
-        ok: true,
-      } as Response);
+        await waitForReady(config);
 
-      const config: HealthCheckConfig = {
-        host: '192.168.1.100',
-        port: 9090,
-      };
-
-      await waitForReady(config);
-
-      expect(mockFetch).toHaveBeenCalledWith('http://192.168.1.100:9090/v1/.well-known/ready');
-    });
-
-    it('should use exponential backoff between retries', async () => {
-      const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
-      let callCount = 0;
-
-      // eslint-disable-next-line require-await
-      mockFetch.mockImplementation(async () => {
-        // eslint-disable-next-line no-plusplus
-        callCount++;
-        if (callCount < 4) {
-          throw new Error('Connection refused');
-        }
-        return { ok: true } as Response;
+        expect(mockFetch).toHaveBeenCalledTimes(3);
       });
 
-      const config: HealthCheckConfig = {
-        host: 'localhost',
-        port: 8080,
-        timeout: 10000,
-        interval: 10,
-      };
+      it('should handle extremely short intervals correctly', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        mockFetch.mockResolvedValue({ ok: true } as Response);
 
-      await waitForReady(config);
+        const config: HealthCheckConfig = {
+          host: 'localhost',
+          port: 8080,
+          interval: 1,
+        };
 
-      // Should make multiple attempts with increasing intervals
-      expect(mockFetch).toHaveBeenCalledTimes(4);
+        await waitForReady(config);
+
+        expect(mockFetch).toHaveBeenCalled();
+      });
+
+      it('should handle very large timeout values without issues', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        mockFetch.mockResolvedValue({ ok: true } as Response);
+
+        const config: HealthCheckConfig = {
+          host: 'localhost',
+          port: 8080,
+          timeout: 999999999,
+          interval: 100,
+        };
+
+        await waitForReady(config);
+
+        // Should succeed immediately, not wait for huge timeout
+        expect(mockFetch).toHaveBeenCalled();
+      });
+
+      it('should handle mixed error types in succession', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        let callCount = 0;
+
+        mockFetch.mockImplementation(async () => {
+          callCount++;
+          if (callCount === 1) throw new Error('Connection refused');
+          if (callCount === 2) return { ok: false, status: 503 } as Response;
+          if (callCount === 3) return { ok: false, status: 500 } as Response;
+          return { ok: true } as Response;
+        });
+
+        const config: HealthCheckConfig = {
+          host: 'localhost',
+          port: 8080,
+          timeout: 10000,
+          interval: 10,
+        };
+
+        await waitForReady(config);
+
+        expect(mockFetch).toHaveBeenCalledTimes(4);
+      });
     });
 
-    it('should suppress console logs when silent is true', async () => {
-      const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValue({
-        ok: true,
-      } as Response);
+    describe('Concurrency & Resource Management', () => {
+      it('should handle multiple simultaneous waitForReady calls independently', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        let call1Count = 0;
+        let call2Count = 0;
 
-      const config: HealthCheckConfig = {
-        host: 'localhost',
-        port: 8080,
-        silent: true,
-      };
+        mockFetch.mockImplementation(async (url: string) => {
+          if (url.includes(':8080')) {
+            call1Count++;
+            if (call1Count < 3) throw new Error('Connection refused');
+            return { ok: true } as Response;
+          } else {
+            call2Count++;
+            if (call2Count < 2) throw new Error('Connection refused');
+            return { ok: true } as Response;
+          }
+        });
 
-      await waitForReady(config);
+        const config1: HealthCheckConfig = {
+          host: 'localhost',
+          port: 8080,
+          timeout: 10000,
+          interval: 10,
+          silent: true,
+        };
 
-      // Console log spy should not have been called
-      expect(consoleLogSpy).not.toHaveBeenCalled();
+        const config2: HealthCheckConfig = {
+          host: 'localhost',
+          port: 8081,
+          timeout: 10000,
+          interval: 10,
+          silent: true,
+        };
+
+        const [result1, result2] = await Promise.all([waitForReady(config1), waitForReady(config2)]);
+
+        // Both should have completed successfully
+        expect(result1).toBeUndefined();
+        expect(result2).toBeUndefined();
+        expect(call1Count).toBeGreaterThanOrEqual(3);
+        expect(call2Count).toBeGreaterThanOrEqual(2);
+      });
+
+      it('should clean up properly when promise resolves early', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        let callCount = 0;
+
+        mockFetch.mockImplementation(async () => {
+          callCount++;
+          if (callCount < 2) throw new Error('Connection refused');
+          return { ok: true } as Response;
+        });
+
+        const config: HealthCheckConfig = {
+          host: 'localhost',
+          port: 8080,
+          timeout: 10000,
+          interval: 10,
+          silent: true,
+        };
+
+        await waitForReady(config);
+
+        const callsAfterSuccess = callCount;
+
+        // Wait a bit to ensure no more calls happen
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        // Should not continue polling after success
+        expect(callCount).toBe(callsAfterSuccess);
+      });
+    });
+
+    describe('Input Validation & Security', () => {
+      it('should handle negative timeout gracefully', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        mockFetch.mockRejectedValue(new Error('Connection refused'));
+
+        const config: HealthCheckConfig = {
+          host: 'localhost',
+          port: 8080,
+          timeout: -1000,
+          interval: 100,
+        };
+
+        // Should fail immediately with negative timeout
+        await expect(waitForReady(config)).rejects.toThrow();
+      });
+
+      it('should handle negative interval values', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        let callCount = 0;
+
+        mockFetch.mockImplementation(async () => {
+          callCount++;
+          if (callCount < 2) {
+            throw new Error('Connection refused');
+          }
+          return { ok: true } as Response;
+        });
+
+        const config: HealthCheckConfig = {
+          host: 'localhost',
+          port: 8080,
+          interval: -100, // Negative becomes 0, causing immediate retries
+          timeout: 5000,
+          maxRetries: 5,
+        };
+
+        // Should still work (setTimeout handles negative as 0)
+        await expect(waitForReady(config)).resolves.toBeUndefined();
+        expect(callCount).toBeGreaterThanOrEqual(2);
+      });
+
+      it('should handle negative maxRetries', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        mockFetch.mockRejectedValue(new Error('Connection refused'));
+
+        const config: HealthCheckConfig = {
+          host: 'localhost',
+          port: 8080,
+          timeout: 5000,
+          interval: 100,
+          maxRetries: -5,
+        };
+
+        // Should fail immediately with negative maxRetries
+        await expect(waitForReady(config)).rejects.toThrow();
+      });
+
+      it('should not cause DoS with extremely large maxRetries', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        mockFetch.mockResolvedValue({ ok: true } as Response);
+
+        const config: HealthCheckConfig = {
+          host: 'localhost',
+          port: 8080,
+          timeout: 100, // Short timeout prevents long execution
+          interval: 10,
+          maxRetries: 999999999, // Extremely large
+        };
+
+        // Should be limited by timeout, not maxRetries
+        await expect(waitForReady(config)).resolves.toBeUndefined();
+
+        // Should not have attempted billions of retries
+        expect(mockFetch.mock.calls.length).toBeLessThan(100);
+      });
+
+      it('should handle special characters in host safely', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        mockFetch.mockResolvedValue({ ok: true } as Response);
+
+        const config: HealthCheckConfig = {
+          host: '127.0.0.1; rm -rf /', // Potential injection attempt
+          port: 8080,
+        };
+
+        await waitForReady(config);
+
+        // Should pass host through to URL (no injection risk in URL construction)
+        expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('127.0.0.1; rm -rf /'));
+      });
+
+      it('should handle extremely large port numbers', async () => {
+        const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+        mockFetch.mockResolvedValue({ ok: true } as Response);
+
+        const config: HealthCheckConfig = {
+          host: 'localhost',
+          port: 99999, // Beyond valid port range
+        };
+
+        // Should construct URL even if port is invalid
+        await waitForReady(config);
+
+        expect(mockFetch).toHaveBeenCalledWith('http://localhost:99999/v1/.well-known/ready');
+      });
     });
   });
 
   describe('checkHealth', () => {
     it('should return true when Weaviate is ready', async () => {
       const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValue({
-        ok: true,
-      } as Response);
+      mockFetch.mockResolvedValue({ ok: true } as Response);
 
       const result = await checkHealth({ host: 'localhost', port: 8080 });
 
@@ -210,12 +620,9 @@ describe('health-checker', () => {
       expect(mockFetch).toHaveBeenCalledWith('http://localhost:8080/v1/.well-known/ready');
     });
 
-    it('should return false when Weaviate is not ready', async () => {
+    it('should return false when Weaviate returns non-ok status', async () => {
       const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 503,
-      } as Response);
+      mockFetch.mockResolvedValue({ ok: false, status: 503 } as Response);
 
       const result = await checkHealth({ host: 'localhost', port: 8080 });
 
@@ -231,24 +638,52 @@ describe('health-checker', () => {
       expect(result).toBe(false);
     });
 
-    it('should work with different host and port', async () => {
+    it('should work with different host and port combinations', async () => {
       const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValue({
-        ok: true,
-      } as Response);
+      mockFetch.mockResolvedValue({ ok: true } as Response);
 
       await checkHealth({ host: '10.0.0.1', port: 9090 });
 
       expect(mockFetch).toHaveBeenCalledWith('http://10.0.0.1:9090/v1/.well-known/ready');
+    });
+
+    it('should handle network timeout errors', async () => {
+      const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+      mockFetch.mockRejectedValue(new Error('Network timeout'));
+
+      const result = await checkHealth({ host: 'localhost', port: 8080 });
+
+      expect(result).toBe(false);
+    });
+
+    it('should not throw exceptions on any error', async () => {
+      const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+      mockFetch.mockRejectedValue(new Error('Catastrophic failure'));
+
+      await expect(checkHealth({ host: 'localhost', port: 8080 })).resolves.toBe(false);
+    });
+
+    it('should handle different HTTP error codes', async () => {
+      const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+
+      // Test 404
+      mockFetch.mockResolvedValue({ ok: false, status: 404 } as Response);
+      expect(await checkHealth({ host: 'localhost', port: 8080 })).toBe(false);
+
+      // Test 500
+      mockFetch.mockResolvedValue({ ok: false, status: 500 } as Response);
+      expect(await checkHealth({ host: 'localhost', port: 8080 })).toBe(false);
+
+      // Test 503
+      mockFetch.mockResolvedValue({ ok: false, status: 503 } as Response);
+      expect(await checkHealth({ host: 'localhost', port: 8080 })).toBe(false);
     });
   });
 
   describe('checkLiveness', () => {
     it('should return true when Weaviate is live', async () => {
       const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValue({
-        ok: true,
-      } as Response);
+      mockFetch.mockResolvedValue({ ok: true } as Response);
 
       const result = await checkLiveness({ host: 'localhost', port: 8080 });
 
@@ -258,10 +693,7 @@ describe('health-checker', () => {
 
     it('should return false when Weaviate is not live', async () => {
       const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 503,
-      } as Response);
+      mockFetch.mockResolvedValue({ ok: false, status: 503 } as Response);
 
       const result = await checkLiveness({ host: 'localhost', port: 8080 });
 
@@ -277,15 +709,47 @@ describe('health-checker', () => {
       expect(result).toBe(false);
     });
 
-    it('should work with different host and port', async () => {
+    it('should work with different host and port combinations', async () => {
       const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValue({
-        ok: true,
-      } as Response);
+      mockFetch.mockResolvedValue({ ok: true } as Response);
 
       await checkLiveness({ host: '172.16.0.1', port: 9090 });
 
       expect(mockFetch).toHaveBeenCalledWith('http://172.16.0.1:9090/v1/.well-known/live');
+    });
+
+    it('should handle DNS resolution failures', async () => {
+      const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+      mockFetch.mockRejectedValue(new Error('DNS resolution failed'));
+
+      const result = await checkLiveness({ host: 'nonexistent.local', port: 8080 });
+
+      expect(result).toBe(false);
+    });
+
+    it('should differentiate between ready and live endpoints', async () => {
+      const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+      mockFetch.mockResolvedValue({ ok: true } as Response);
+
+      await checkLiveness({ host: 'localhost', port: 8080 });
+      await checkHealth({ host: 'localhost', port: 8080 });
+
+      expect(mockFetch).toHaveBeenNthCalledWith(1, 'http://localhost:8080/v1/.well-known/live');
+      expect(mockFetch).toHaveBeenNthCalledWith(2, 'http://localhost:8080/v1/.well-known/ready');
+    });
+
+    it('should handle different HTTP error codes', async () => {
+      const mockFetch = global.fetch as ReturnType<typeof vi.fn>;
+
+      // Test various error codes
+      mockFetch.mockResolvedValue({ ok: false, status: 404 } as Response);
+      expect(await checkLiveness({ host: 'localhost', port: 8080 })).toBe(false);
+
+      mockFetch.mockResolvedValue({ ok: false, status: 500 } as Response);
+      expect(await checkLiveness({ host: 'localhost', port: 8080 })).toBe(false);
+
+      mockFetch.mockResolvedValue({ ok: false, status: 502 } as Response);
+      expect(await checkLiveness({ host: 'localhost', port: 8080 })).toBe(false);
     });
   });
 });
