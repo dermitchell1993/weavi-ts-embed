@@ -11,3 +11,4 @@ weaviate-data/
 .npmrc
 .eslintcache
 tools/docker-compose-embedded.yml
+.vitest-cache/
