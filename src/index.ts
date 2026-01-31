@@ -147,5 +147,15 @@ export type { BinaryInfo, ProcessConfig, HealthCheckConfig } from './types';
 export { waitForReady, checkHealth, checkLiveness } from './health-checker';
 export * from './process-manager';
 
+// Export configuration validator utilities (Wave 1.5: Config Validator)
+export {
+  validateOptions,
+  applyDefaults,
+  mergeConfig,
+  prepareConfig,
+  ConfigValidationError,
+  DEFAULT_CONFIG,
+} from './config';
+
 // Re-export commonly used v3 WeaviateClient types for convenience
 export type { WeaviateClient } from 'weaviate-client';

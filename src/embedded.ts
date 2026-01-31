@@ -353,19 +353,22 @@ export class EmbeddedDB {
 
   private waitTillListening(): Promise<null> {
     return new Promise((resolve, reject) => {
-      // Configurable timeout via environment variable, default 120 seconds
-      const startupTimeout = parseInt(process.env.WEAVIATE_STARTUP_TIMEOUT || '120000', 10);
-      console.log(`Waiting for Weaviate startup (timeout: ${startupTimeout}ms)...`);
+      // Configurable timeout with CI/test-aware defaults
+      // CI: 30s, Production: 120s (configurable via WEAVIATE_STARTUP_TIMEOUT)
+      const defaultTimeout = process.env.CI ? 30000 : 120000;
+      const timeoutMs = parseInt(process.env.WEAVIATE_STARTUP_TIMEOUT || String(defaultTimeout), 10);
+      const checkIntervalMs = process.env.CI ? 500 : 1000;
+      console.log(`Waiting for Weaviate startup (timeout: ${timeoutMs}ms)...`);
 
       const timeout = setTimeout(() => {
         clearTimeout(timeout);
         clearInterval(interval);
         reject(
           new Error(
-            `failed to connect to embedded db @ ${this.options.host}:${this.options.port} within ${startupTimeout}ms`
+            `failed to connect to embedded db @ ${this.options.host}:${this.options.port} within ${timeoutMs}ms`
           )
         );
-      }, startupTimeout);
+      }, timeoutMs);
 
       const interval = setInterval(() => {
         this.isApiReady().then((ready) => {
@@ -389,7 +392,7 @@ export class EmbeddedDB {
               });
           }
         });
-      }, 1000); // Check every 1 second
+      }, checkIntervalMs);
     });
   }
 

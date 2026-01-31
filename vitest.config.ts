@@ -21,6 +21,6 @@ export default defineConfig({
     },
     // Optimize for CI
     reporters: process.env.CI ? ['verbose'] : ['default'],
-    logHeapUsage: true,
+    logHeapUsage: !!process.env.CI,
   },
 });
