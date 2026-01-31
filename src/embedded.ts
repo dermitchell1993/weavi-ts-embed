@@ -55,6 +55,7 @@ export class EmbeddedOptions {
       QUERY_DEFAULTS_LIMIT: '20',
       PERSISTENCE_DATA_PATH: this.persistenceDataPath,
       CLUSTER_HOSTNAME: `Embedded_at_${this.port}`,
+      RAFT_BOOTSTRAP_EXPECT: '1', // Enable single-node Raft for embedded mode
       DEFAULT_VECTORIZER_MODULE: 'none',
       ENABLE_MODULES:
         'text2vec-openai,text2vec-cohere,text2vec-huggingface,' +
