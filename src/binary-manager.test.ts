@@ -97,16 +97,22 @@ describe('Binary Manager - Version Resolution', () => {
     });
 
     it('should accept valid semantic versions (major.minor.patch)', () => {
-      // Note: The regex /[1-9]\.[1-9]{2}\..*/g requires:
-      // - Major: single digit 1-9
-      // - Minor: exactly 2 digits, both 1-9 (so 11-99, not 10, 20, etc.)
-      // - Patch: any string after the second dot
+      // Fixed regex now accepts proper semver including:
+      // - Major: 1-9 with optional additional digits (1, 2, 10, 23)
+      // - Minor: any digits including 0, 10, 20, etc.
+      // - Patch: any digits
+      // - Pre-release: -alpha.1, -beta.2, -rc.1
+      // - Build metadata: +20230615
       const testCases = [
         { input: '1.18.0', expected: '1.18.0' },
-        { input: '1.19.8', expected: '1.19.8' },
-        { input: '1.27.0', expected: '1.27.0' },
-        { input: '2.15.5', expected: '2.15.5' },
+        { input: '1.10.0', expected: '1.10.0' }, // Now accepts minor version 10
+        { input: '1.20.5', expected: '1.20.5' }, // Now accepts minor version 20
+        { input: '2.5.0', expected: '2.5.0' }, // Now accepts single-digit minor
+        { input: '10.18.0', expected: '10.18.0' }, // Now accepts multi-digit major
+        { input: '1.0.0', expected: '1.0.0' }, // Now accepts minor version 0
         { input: '1.18.1-alpha.0', expected: '1.18.1-alpha.0' },
+        { input: '1.23.0-rc.1', expected: '1.23.0-rc.1' },
+        { input: '2.15.5+20230615', expected: '2.15.5+20230615' },
       ];
 
       testCases.forEach(({ input, expected }) => {
@@ -121,31 +127,37 @@ describe('Binary Manager - Version Resolution', () => {
         '1.2', // Missing patch
         '1..0', // Double dots
         'abc', // Non-numeric
-        '1.2.3', // Minor version needs 2 digits (11-99)
-        '10.18.0', // Major version must be single digit 1-9
         '0.18.0', // Major version must be 1-9, not 0
+        '1.2.3.4', // Too many version components
       ];
 
       invalidVersions.forEach((version) => {
-        expect(() => new EmbeddedOptions({ version })).toThrow(
+        expect(() => new EmbeddedOptions({ version }), `Should reject invalid version: ${version}`).toThrow(
           /invalid version:.*version must resemble '\{major\}\.\{minor\}\.\{patch\}, or 'latest'/
         );
       });
     });
 
-    it('should document regex behavior - contains match vs exact match', () => {
-      // DOCUMENTATION: The regex /[1-9]\.[1-9]{2}\..*/g doesn't use anchors (^ and $)
-      // so it matches if the pattern appears ANYWHERE in the string, not just as exact match
-      // Examples that pass regex but might be unexpected:
-      const containsValidPattern = [
-        'v1.18.0', // Contains valid pattern after 'v'
-        'prefix-1.18.0', // Contains valid pattern after 'prefix-'
-        '1.18.0-suffix', // Contains valid pattern before '-suffix' (this is OK for alpha/beta versions)
+    it('should treat empty version string as "latest"', () => {
+      // Empty string is treated as "no version provided", which defaults to "latest"
+      const options = new EmbeddedOptions({ version: '' });
+      expect(options.version).toBe('latest');
+    });
+
+    it('should reject versions with prefixes due to anchored regex', () => {
+      // FIXED: The improved regex now uses anchors (^ and $) to match the entire string
+      // This prevents substring matching and rejects invalid prefixes/suffixes
+      const invalidPrefixedVersions = [
+        'v1.18.0', // 'v' prefix not allowed
+        'prefix-1.18.0', // Arbitrary prefix not allowed
+        '1.18.0suffix', // Arbitrary suffix not allowed (but pre-release/build metadata OK)
       ];
 
-      // These all currently PASS validation due to substring matching
-      containsValidPattern.forEach((version) => {
-        expect(() => new EmbeddedOptions({ version })).not.toThrow();
+      // These should all be REJECTED due to exact matching with anchors
+      invalidPrefixedVersions.forEach((version) => {
+        expect(() => new EmbeddedOptions({ version }), `Should reject prefixed version: ${version}`).toThrow(
+          /invalid version:.*version must resemble '\{major\}\.\{minor\}\.\{patch\}, or 'latest'/
+        );
       });
     });
 
@@ -164,6 +176,24 @@ describe('Binary Manager - Version Resolution', () => {
           binaryUrl: 'https://example.com/weaviate',
         });
       }).toThrow('cannot provide both version and binaryUrl');
+    });
+
+    it('should reject path traversal attempts in version string (SECURITY)', () => {
+      // Security test: Reject malicious version strings with path traversal
+      // These are all rejected - some fail regex match, others fail path traversal check
+      const pathTraversalAttempts = [
+        '1.18.0/../../../tmp', // Fails regex (has extra chars after version)
+        '../1.0.0', // Fails regex (starts with ..)
+        '1.0.0/../../etc/passwd', // Fails regex (has path after version)
+        '1.0.0\\..\\..\\windows', // Fails regex (has backslashes)
+      ];
+
+      pathTraversalAttempts.forEach((version) => {
+        expect(
+          () => new EmbeddedOptions({ version }),
+          `Should reject path traversal attempt: ${version}`
+        ).toThrow(/invalid version/); // All are rejected with "invalid version" error
+      });
     });
   });
 });
@@ -363,25 +393,18 @@ describe('Binary Manager - Checksum & Caching', () => {
       });
     });
 
-    it('should note potential security concern with version-like path traversal', () => {
-      // SECURITY NOTE: Versions like "1.18.0/../../../tmp" pass regex validation
-      // because the regex uses .* which matches the path traversal suffix.
-      // However, this is mitigated because:
-      // 1. The path is concatenated with base cache path (not used as absolute path)
-      // 2. User would need to deliberately craft such a version string
-      // 3. In production, versions come from GitHub API or are hardcoded
+    it('should reject path traversal patterns in version strings (SECURITY FIX)', () => {
+      // SECURITY FIX: The improved regex now properly rejects path traversal attempts
+      // Old regex: /[1-9]\.[1-9]{2}\..*/g allowed "1.18.0/../../../tmp"
+      // New regex: /^[1-9]\d*\.\d+\.\d+(-[\w.]+)?(\+[\w.]+)?$/ with explicit path checks
 
-      // This test documents the behavior - consider improving the regex in future
       const pathTraversalVersion = '1.18.0/../../../tmp';
 
-      // This currently PASSES validation (security consideration for future improvement)
-      expect(() => new EmbeddedOptions({ version: pathTraversalVersion })).not.toThrow();
-
-      const options = new EmbeddedOptions({ version: pathTraversalVersion });
-      expect(options.version).toBe(pathTraversalVersion);
-
-      // The binaryPath will include the traversal, but it's relative to cache dir
-      expect(options.binaryPath).toContain(pathTraversalVersion);
+      // This now FAILS validation (security improvement)
+      expect(
+        () => new EmbeddedOptions({ version: pathTraversalVersion }),
+        'Path traversal should be rejected'
+      ).toThrow(/invalid version/);
     });
   });
 });
