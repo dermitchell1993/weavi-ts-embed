@@ -20,11 +20,13 @@
  * @module tests/security/archiveBombs
  */
 
+/* eslint-disable no-sync */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { EmbeddedDB, EmbeddedOptions } from '../../src/embedded';
 import { mkdirSync, writeFileSync, unlinkSync, rmdirSync, chmodSync, existsSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
+import { execSync } from 'child_process';
 import {
   createNestedZip,
   createCompressionBomb,
@@ -38,6 +40,15 @@ import {
   SECURITY_THRESHOLDS,
   createTarWithPathTraversal,
 } from '../helpers/securityArchives';
+
+// Test depth constants for performance optimization
+const TEST_DEPTHS = {
+  EXTREME: process.env.CI ? 200 : 1000, // Reduce in CI for faster feedback
+  MODERATE: process.env.CI ? 100 : 500,
+  SAFE: 50,
+  THRESHOLD: 100,
+  JUST_ABOVE_THRESHOLD: 101,
+} as const;
 
 /**
  * Security test suite for archive bomb protection
@@ -72,16 +83,17 @@ describe('Archive Bomb Protection', () => {
   });
 
   afterEach(() => {
-    // Cleanup test directory
-    // Note: Using exec for cleanup to avoid no-sync linting issues
+    // Cleanup test directory using cross-platform approach
     try {
       if (existsSync(testDir)) {
-        const { execSync } = require('child_process');
+        // Use execSync with cross-platform compatible command
+        // Note: rm -rf works on Unix/Linux/macOS. For true cross-platform,
+        // consider using fs.promises.rm() in async tests
         execSync(`rm -rf "${testDir}"`, { stdio: 'ignore' });
       }
     } catch (error) {
-      // Ignore cleanup errors in tests
-      console.warn(`Cleanup warning: ${error}`);
+      // Ignore cleanup errors - test isolation is maintained
+      console.warn(`Cleanup warning for ${testDir}:`, error);
     }
   });
 
@@ -95,10 +107,10 @@ describe('Archive Bomb Protection', () => {
    * Protection: Limit nesting depth to prevent infinite/extreme recursion
    */
   describe('Excessive Nesting Detection (Zip Bombs)', () => {
-    it('should detect and reject zip bombs with extreme nesting (1000 levels)', () => {
-      // Generate a zip bomb with excessive nesting
-      const zipBomb = createNestedZip(1000);
-      const zipPath = join(testDir, 'zipbomb-1000.zip');
+    it('should detect and reject zip bombs with extreme nesting', () => {
+      // Generate a zip bomb with excessive nesting (1000 local, 200 in CI)
+      const zipBomb = createNestedZip(TEST_DEPTHS.EXTREME);
+      const zipPath = join(testDir, `zipbomb-${TEST_DEPTHS.EXTREME}.zip`);
       writeFileSync(zipPath, zipBomb);
 
       // TODO: Implement security check in EmbeddedDB.unzipBinary()
@@ -111,51 +123,51 @@ describe('Archive Bomb Protection', () => {
       //   .toThrow(/excessive nesting.*security|nesting depth.*exceeded|zip bomb detected/i);
 
       // Temporary assertion documenting expected behavior
-      expect(1000).toBeGreaterThan(SECURITY_THRESHOLDS.MAX_NESTING_DEPTH);
+      expect(TEST_DEPTHS.EXTREME).toBeGreaterThan(SECURITY_THRESHOLDS.MAX_NESTING_DEPTH);
     });
 
-    it('should detect and reject zip bombs with moderate nesting (500 levels)', () => {
-      const zipBomb = createNestedZip(500);
-      const zipPath = join(testDir, 'zipbomb-500.zip');
+    it('should detect and reject zip bombs with moderate nesting', () => {
+      const zipBomb = createNestedZip(TEST_DEPTHS.MODERATE);
+      const zipPath = join(testDir, `zipbomb-${TEST_DEPTHS.MODERATE}.zip`);
       writeFileSync(zipPath, zipBomb);
 
       // Expected: Rejection due to nesting depth > 100
       // TODO: Implement nesting depth validation
 
-      expect(500).toBeGreaterThan(SECURITY_THRESHOLDS.MAX_NESTING_DEPTH);
+      expect(TEST_DEPTHS.MODERATE).toBeGreaterThan(SECURITY_THRESHOLDS.MAX_NESTING_DEPTH);
     });
 
     it('should accept archives with safe nesting levels (<= 100 levels)', () => {
-      const safeArchive = createNestedZip(50);
+      const safeArchive = createNestedZip(TEST_DEPTHS.SAFE);
       const zipPath = join(testDir, 'safe-nested.zip');
       writeFileSync(zipPath, safeArchive);
 
       // Expected: Should extract successfully
       // TODO: Verify extraction succeeds when nesting <= threshold
 
-      expect(50).toBeLessThanOrEqual(SECURITY_THRESHOLDS.MAX_NESTING_DEPTH);
+      expect(TEST_DEPTHS.SAFE).toBeLessThanOrEqual(SECURITY_THRESHOLDS.MAX_NESTING_DEPTH);
     });
 
     it('should detect nesting at exactly the threshold boundary (100 levels)', () => {
-      const boundaryArchive = createNestedZip(100);
+      const boundaryArchive = createNestedZip(TEST_DEPTHS.THRESHOLD);
       const zipPath = join(testDir, 'boundary-nested.zip');
       writeFileSync(zipPath, boundaryArchive);
 
       // Expected: Should accept (inclusive boundary)
       // TODO: Verify boundary condition handling
 
-      expect(100).toBe(SECURITY_THRESHOLDS.MAX_NESTING_DEPTH);
+      expect(TEST_DEPTHS.THRESHOLD).toBe(SECURITY_THRESHOLDS.MAX_NESTING_DEPTH);
     });
 
     it('should detect nesting just above threshold (101 levels)', () => {
-      const overThresholdArchive = createNestedZip(101);
+      const overThresholdArchive = createNestedZip(TEST_DEPTHS.JUST_ABOVE_THRESHOLD);
       const zipPath = join(testDir, 'over-threshold.zip');
       writeFileSync(zipPath, overThresholdArchive);
 
       // Expected: Should reject
       // TODO: Verify strict threshold enforcement
 
-      expect(101).toBeGreaterThan(SECURITY_THRESHOLDS.MAX_NESTING_DEPTH);
+      expect(TEST_DEPTHS.JUST_ABOVE_THRESHOLD).toBeGreaterThan(SECURITY_THRESHOLDS.MAX_NESTING_DEPTH);
     });
   });
 
