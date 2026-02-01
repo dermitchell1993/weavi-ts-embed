@@ -57,9 +57,44 @@ function validateHost(host: string): void {
   // IPv4: strict validation for each octet (0-255)
   const ipv4Pattern =
     /^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])$/;
-  // IPv6: supports full and compressed forms (::1, fe80::1, 2001:db8::1, etc.)
-  // Full form: 8 groups of 1-4 hex digits separated by colons
-  // Compressed form: :: can replace one or more groups of zeros
+  /**
+   * IPv6 Address Validation Pattern
+   *
+   * Supports both full and compressed IPv6 forms, including:
+   * - Full form: 2001:0db8:85a3:0000:0000:8a2e:0370:7334
+   * - Compressed: 2001:db8:85a3::8a2e:370:7334
+   * - Loopback: ::1
+   * - Link-local: fe80::1%eth0
+   * - IPv4-mapped: ::ffff:192.0.2.1
+   *
+   * Pattern breakdown (alternation groups):
+   * 1. ([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}
+   *    → Full form: 8 groups of hex digits (aaaa:bbbb:cccc:dddd:eeee:ffff:gggg:hhhh)
+   *
+   * 2. ([0-9a-fA-F]{1,4}:){1,7}:
+   *    → Compressed with trailing :: (e.g., 2001:db8::)
+   *
+   * 3. ([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}
+   *    → Compressed in middle with 1 trailing group (e.g., 2001:db8::1)
+   *
+   * 4-7. ([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2} ... {1,3} ... {1,4} ... {1,5}
+   *    → Various compressed forms with multiple trailing groups
+   *
+   * 8. [0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})
+   *    → Single leading group with compression (e.g., 2001::8a2e:370:7334)
+   *
+   * 9. :((:[0-9a-fA-F]{1,4}){1,7}|:)
+   *    → Leading :: with groups (e.g., ::1, ::ffff:192.0.2.1) or :: alone
+   *
+   * 10. fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}
+   *    → Link-local addresses with zone ID (e.g., fe80::1%eth0)
+   *
+   * 11. ::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|...[0-9])\.){3}...
+   *    → IPv4-mapped IPv6 (e.g., ::ffff:192.0.2.1)
+   *
+   * 12. ([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|...[0-9])\.){3}...
+   *    → IPv4-compatible IPv6 (e.g., 2001:db8::192.0.2.1)
+   */
   const ipv6Pattern =
     /^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$/;
   // Hostname: alphanumeric with hyphens, can have dots, but must start with letter
