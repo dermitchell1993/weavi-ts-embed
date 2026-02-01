@@ -6,7 +6,6 @@ import {
   calculateDelays,
   sleep,
 } from '../helpers/networkUtils';
-import { get as httpsGet } from 'https';
 
 /**
  * Binary Download Integration Tests

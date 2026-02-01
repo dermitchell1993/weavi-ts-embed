@@ -1,5 +1,6 @@
 import { get as httpsGet } from 'https';
 import { IncomingMessage } from 'http';
+import { createHash } from 'crypto';
 
 export interface RetryOptions {
   maxRetries?: number;
@@ -17,6 +18,9 @@ export interface DownloadResult {
 
 /**
  * Calculate exponential backoff delay
+ * @param attempt - The attempt number (0-indexed)
+ * @param baseDelay - Base delay in milliseconds
+ * @returns Delay in milliseconds (baseDelay * 2^attempt)
  */
 export function calculateExponentialBackoff(attempt: number, baseDelay: number): number {
   return baseDelay * Math.pow(2, attempt);
@@ -24,12 +28,15 @@ export function calculateExponentialBackoff(attempt: number, baseDelay: number):
 
 /**
  * Download a file with retry logic and exponential backoff
+ * @param url - The URL to download from
+ * @param options - Retry configuration options
+ * @returns Download result including data, status code, redirect count, and attempt count
+ * @throws Error if all retry attempts fail or on non-retryable errors (404)
  */
 export async function downloadWithRetry(url: string, options: RetryOptions = {}): Promise<DownloadResult> {
   const { maxRetries = 3, retryDelay = 100, timeout = 5000, exponentialBackoff = true } = options;
 
   let lastError: Error | null = null;
-  const redirectCount = 0;
 
   // eslint-disable-next-line no-await-in-loop
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -38,7 +45,6 @@ export async function downloadWithRetry(url: string, options: RetryOptions = {})
       const result = await downloadFile(url, timeout);
       return {
         ...result,
-        redirectCount,
         attempts: attempt + 1,
       };
     } catch (error) {
@@ -65,9 +71,21 @@ export async function downloadWithRetry(url: string, options: RetryOptions = {})
 }
 
 /**
- * Download a file from a URL with timeout and redirect handling
+ * Internal result type for downloadFile
  */
-function downloadFile(url: string, timeoutMs: number): Promise<{ data: Buffer; statusCode: number }> {
+interface DownloadFileResult {
+  data: Buffer;
+  statusCode: number;
+  redirectCount: number;
+}
+
+/**
+ * Download a file from a URL with timeout and redirect handling
+ * @param url - The URL to download from
+ * @param timeoutMs - Timeout in milliseconds
+ * @returns Promise resolving to download result with data, status code, and redirect count
+ */
+function downloadFile(url: string, timeoutMs: number): Promise<DownloadFileResult> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     let redirectCount = 0;
@@ -108,6 +126,7 @@ function downloadFile(url: string, timeoutMs: number): Promise<{ data: Buffer; s
           resolve({
             data,
             statusCode: resp.statusCode || 200,
+            redirectCount,
           });
         });
 
@@ -136,14 +155,17 @@ function downloadFile(url: string, timeoutMs: number): Promise<{ data: Buffer; s
 
 /**
  * Calculate checksum of a buffer using SHA-256
+ * @param data - Buffer to calculate checksum for
+ * @returns SHA-256 checksum as a 64-character hex string
  */
 export function calculateChecksum(data: Buffer): string {
-  const crypto = require('crypto');
-  return crypto.createHash('sha256').update(data).digest('hex');
+  return createHash('sha256').update(data).digest('hex');
 }
 
 /**
  * Sleep utility for testing backoff
+ * @param ms - Milliseconds to sleep
+ * @returns Promise that resolves after the specified delay
  */
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -151,6 +173,8 @@ export function sleep(ms: number): Promise<void> {
 
 /**
  * Calculate delays between retry timestamps
+ * @param timestamps - Array of timestamps in milliseconds
+ * @returns Array of delays between consecutive timestamps
  */
 export function calculateDelays(timestamps: number[]): number[] {
   const delays: number[] = [];
@@ -158,26 +182,4 @@ export function calculateDelays(timestamps: number[]): number[] {
     delays.push(timestamps[i] - timestamps[i - 1]);
   }
   return delays;
-}
-
-/**
- * Mock a flaky download that fails intermittently
- */
-export function flakyDownload(failureRate = 0.5): Promise<Buffer> {
-  if (Math.random() < failureRate) {
-    return Promise.reject(new Error('Simulated network failure'));
-  }
-  return Promise.resolve(Buffer.from('success'));
-}
-
-/**
- * Check if a URL is reachable with a simple HEAD request
- */
-export async function isUrlReachable(url: string, timeoutMs = 5000): Promise<boolean> {
-  try {
-    await downloadFile(url, timeoutMs);
-    return true;
-  } catch {
-    return false;
-  }
 }
