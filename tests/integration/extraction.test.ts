@@ -4,6 +4,10 @@
  * Tests real archive extraction operations with actual tar.gz and zip files.
  * Part A of Agent 7: Filesystem Extraction & Performance Tests
  *
+ * NOTE: These tests access private methods (untarBinary, unzipBinary) using `as any`.
+ * This is acceptable for integration testing as we need to test the internal extraction
+ * logic in isolation. The public API (getCachedBinary) is tested in other test suites.
+ *
  * @group integration
  */
 
@@ -354,6 +358,123 @@ describe('Archive Extraction Integration', () => {
       expect(fs.existsSync(archivePath)).toBe(false);
       // But binary should exist
       expect(fs.existsSync(targetBinaryPath)).toBe(true);
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('should throw on corrupted zip archive', async () => {
+      const corruptedArchive = path.join(tempDir, 'corrupt.zip');
+      const targetPath = path.join(tempDir, 'extracted-corrupt');
+
+      // Write invalid zip content
+      fs.writeFileSync(corruptedArchive, 'not a valid zip archive');
+
+      manager = new BinaryManager({
+        cacheDir: tempDir,
+        version: '1.27.0',
+      });
+
+      // Should reject with error - adm-zip will error on invalid format
+      try {
+        await (manager as any).unzipBinary(corruptedArchive, targetPath);
+        expect.fail('Expected unzipBinary to throw an error');
+      } catch (error) {
+        expect(error).toBeDefined();
+      }
+    });
+
+    it('should handle missing weaviate binary in zip', async () => {
+      const { execSync } = await import('child_process');
+
+      // Create a zip with different content (no 'weaviate' file)
+      const wrongFile = path.join(tempDir, 'wrong-file.txt');
+      fs.writeFileSync(wrongFile, 'wrong content');
+
+      const wrongZip = path.join(tempDir, 'wrong.zip');
+      execSync(`zip "${wrongZip}" wrong-file.txt`, { cwd: tempDir });
+
+      fs.unlinkSync(wrongFile);
+
+      const targetPath = path.join(tempDir, 'extracted-wrong');
+
+      manager = new BinaryManager({
+        cacheDir: tempDir,
+        version: '1.27.0',
+      });
+
+      // Should reject because 'weaviate' binary not found
+      try {
+        await (manager as any).unzipBinary(wrongZip, targetPath);
+        expect.fail('Expected unzipBinary to throw an error for missing weaviate binary');
+      } catch (error: any) {
+        expect(error.message).toContain('Failed to find binary in zip');
+      }
+    });
+  });
+
+  describe('Test Fixtures Validation', () => {
+    it('should have valid tar.gz fixture', () => {
+      const fixturePath = path.join(__dirname, '..', 'fixtures', 'weaviate.tar.gz');
+      const buffer = fs.readFileSync(fixturePath);
+
+      // Verify tar.gz magic bytes: 1f 8b (gzip header)
+      expect(buffer[0]).toBe(0x1f);
+      expect(buffer[1]).toBe(0x8b);
+      expect(buffer.length).toBeGreaterThan(0);
+    });
+
+    it('should have valid zip fixture', () => {
+      const fixturePath = path.join(__dirname, '..', 'fixtures', 'weaviate.zip');
+      const buffer = fs.readFileSync(fixturePath);
+
+      // Verify zip magic bytes: 50 4b (PK - zip header)
+      expect(buffer[0]).toBe(0x50);
+      expect(buffer[1]).toBe(0x4b);
+      expect(buffer.length).toBeGreaterThan(0);
+    });
+
+    it('should extract valid content from tar.gz fixture', async () => {
+      const fixturePath = path.join(__dirname, '..', 'fixtures', 'weaviate.tar.gz');
+      const archivePath = path.join(tempDir, 'test-fixture.tar.gz');
+      const targetPath = path.join(tempDir, 'test-fixture-binary');
+
+      fs.copyFileSync(fixturePath, archivePath);
+
+      manager = new BinaryManager({
+        cacheDir: tempDir,
+        version: '1.27.0',
+      });
+
+      // Should extract without errors
+      await expect((manager as any).untarBinary(archivePath, targetPath)).resolves.not.toThrow();
+
+      // Verify extracted binary exists and has content
+      expect(fs.existsSync(targetPath)).toBe(true);
+      const content = fs.readFileSync(targetPath, 'utf8');
+      expect(content).toContain('#!/bin/bash');
+      expect(content).toContain('Mock Weaviate');
+    });
+
+    it('should extract valid content from zip fixture', async () => {
+      const fixturePath = path.join(__dirname, '..', 'fixtures', 'weaviate.zip');
+      const archivePath = path.join(tempDir, 'test-fixture.zip');
+      const targetPath = path.join(tempDir, 'test-fixture-binary');
+
+      fs.copyFileSync(fixturePath, archivePath);
+
+      manager = new BinaryManager({
+        cacheDir: tempDir,
+        version: '1.27.0',
+      });
+
+      // Should extract without errors
+      await expect((manager as any).unzipBinary(archivePath, targetPath)).resolves.not.toThrow();
+
+      // Verify extracted binary exists and has content
+      expect(fs.existsSync(targetPath)).toBe(true);
+      const content = fs.readFileSync(targetPath, 'utf8');
+      expect(content).toContain('#!/bin/bash');
+      expect(content).toContain('Mock Weaviate');
     });
   });
 });

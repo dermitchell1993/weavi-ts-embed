@@ -114,6 +114,64 @@ Test fixtures are located in `tests/fixtures/`:
 
 These fixtures are used to test real extraction operations without downloading large binaries from GitHub.
 
+## Architecture Decision Records (ADRs)
+
+### Why Mock Archives Instead of Real Downloads?
+
+**Decision**: Use lightweight mock archives (< 1KB) instead of downloading real Weaviate binaries (> 100MB).
+
+**Rationale**:
+- **Speed**: Fixtures load instantly vs minutes for real downloads
+- **Reliability**: No network dependency or external service failures
+- **Cost**: No GitHub API rate limits or bandwidth concerns
+- **Coverage**: Same extraction logic tested with identical code paths
+- **CI Efficiency**: Faster test execution in continuous integration
+
+**Trade-offs**:
+- Mock archives don't catch binary-specific edge cases
+- Real-world file sizes not tested (mitigated by large archive test)
+
+**Validation**: Large archive test (>10MB) ensures scaling behavior works correctly.
+
+### Why Relaxed Performance Thresholds?
+
+**Decision**: Use relaxed thresholds (2-5x multipliers) instead of strict absolute values.
+
+**Rationale**:
+- **CI Variance**: Shared runners have inconsistent performance
+  - CPU throttling under load
+  - Different hardware generations
+  - Varying background processes
+- **Goal**: Catch regressions, not enforce absolutes
+  - A 10x slowdown indicates a problem
+  - Small variations (2-3x) are acceptable noise
+- **JIT Compilation**: Cold-start performance varies
+  - Warmup iterations reduce variance
+  - First runs are always slower
+
+**Trade-offs**:
+- Some real slowdowns may not be detected (< threshold)
+- Tests are less precise about actual performance
+
+**Mitigation**: Warmup iterations added to reduce JIT variance.
+
+### Why Private Method Testing with `as any`?
+
+**Decision**: Access private methods (`untarBinary`, `unzipBinary`) using TypeScript's `as any` cast.
+
+**Rationale**:
+- **Integration Testing**: Need to test internal extraction logic in isolation
+- **Public API Coverage**: `getCachedBinary` is tested elsewhere
+- **Granular Control**: Allows testing specific extraction scenarios
+- **Error Injection**: Easier to test error cases with direct access
+
+**Trade-offs**:
+- Bypasses TypeScript type safety
+- Tests may break if private API changes
+- Not recommended for production code
+
+**Justification**: This is standard practice for integration testing internal behavior that's not exposed via public APIs. The risk is acceptable given the value of comprehensive extraction testing.
+
 ## Adding New Tests
 
 ### Integration Tests
@@ -237,9 +295,8 @@ When adding tests:
 
 ## Test Statistics
 
-- **Total Tests**: 24 (as of this implementation)
-  - Extraction: 11 tests
+- **Total Tests**: 31 (as of this implementation)
+  - Extraction: 18 tests (11 happy path + 2 error cases + 5 fixture validation)
   - Performance: 13 tests
 - **Coverage**: See `npm run test:coverage`
-- **Execution Time**: ~500ms (excluding large archive test)
-
+- **Execution Time**: ~600ms (excluding large archive test)

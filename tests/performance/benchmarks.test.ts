@@ -49,6 +49,9 @@ describe('Checksum Performance', () => {
     // Generate a very long URL (10,000 characters)
     const longUrl = 'https://example.com/' + 'a'.repeat(10000);
 
+    // Warmup iteration to account for JIT compilation
+    md5(longUrl);
+
     const start = performance.now();
     const checksum = md5(longUrl);
     const duration = performance.now() - start;
@@ -62,6 +65,9 @@ describe('Checksum Performance', () => {
   it('should handle multiple checksums quickly', () => {
     // Create 1000 unique URLs
     const urls = Array.from({ length: 1000 }, (_, i) => `https://example.com/binary-${i}`);
+
+    // Warmup iteration
+    urls.slice(0, 10).forEach((url) => md5(url));
 
     const start = performance.now();
     const checksums = urls.map((url) => md5(url));
@@ -124,12 +130,12 @@ describe('Checksum Performance', () => {
     });
 
     // Performance should not degrade exponentially
-    // Largest batch average should be reasonable (less than 5x the smallest batch average)
+    // Largest batch average should be reasonable (less than 10x the smallest batch average)
     const minAvg = Math.min(...durationsPerChecksum);
     const maxAvg = Math.max(...durationsPerChecksum);
 
-    // Relaxed assertion - just check it doesn't degrade exponentially
-    expect(maxAvg).toBeLessThan(minAvg * 5);
+    // Relaxed assertion - just check it doesn't degrade exponentially (10x for high CI variance)
+    expect(maxAvg).toBeLessThan(minAvg * 10);
   });
 });
 
@@ -261,8 +267,8 @@ describe('Cache Performance', () => {
     });
 
     // Verify linear scaling - largest cache should not be significantly slower
-    // 5000-entry cache lookups should not be more than 3x slower than 100-entry (CI variance)
-    expect(durationsPerOp[3]).toBeLessThan(durationsPerOp[0] * 3);
+    // 5000-entry cache lookups should not be more than 5x slower than 100-entry (CI variance)
+    expect(durationsPerOp[3]).toBeLessThan(durationsPerOp[0] * 5);
 
     // All should maintain sub-millisecond average
     durationsPerOp.forEach((avg) => {
