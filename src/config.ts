@@ -126,7 +126,11 @@ function validateVersion(version: string): void {
   // Combined: 1.0.0-rc.1+build.123
   // Follows semver spec which allows 0.x.x for early-stage software
   // Anchored regex ensures entire string matches (not just substring)
-  const versionPattern = /^(0|[1-9]\d*)\.\d+\.\d+(-[\w.]+)?(\+[\w.]+)?$/;
+  //
+  // Pattern: [0-9A-Za-z.-]+ strictly follows semver 2.0.0 spec section 9
+  // "Identifiers MUST comprise only ASCII alphanumerics and hyphens [0-9A-Za-z-]"
+  // Dots are allowed as separators between identifiers
+  const versionPattern = /^(0|[1-9]\d*)\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$/;
   if (!versionPattern.test(version)) {
     throw new ConfigValidationError(
       "Version must be 'latest' or follow semantic versioning format: " +
