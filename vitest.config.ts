@@ -5,6 +5,8 @@ export default defineConfig({
   test: {
     environment: 'node',
     testTimeout: 60000,
+    // Run test files sequentially to prevent resource contention
+    fileParallelism: 1,
     // Use threads for parallelization but limit for integration tests
     pool: process.env.VITEST_POOL || 'threads',
     maxThreads: process.env.CI ? 2 : 4,
