@@ -87,7 +87,9 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.cache/weaviate-embedded-*
-        key: ${{ runner.os }}-weaviate-binaries-${{ hashFiles('src/**/*.ts') }}
+        # Cache key based on package.json to persist across source code changes
+        # Only invalidate when dependencies change (which may affect required Weaviate versions)
+        key: ${{ runner.os }}-weaviate-binaries-${{ hashFiles('package-lock.json') }}
         restore-keys: |
           ${{ runner.os }}-weaviate-binaries-
     - name: "Run integration tests"
