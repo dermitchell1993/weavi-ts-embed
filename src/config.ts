@@ -36,23 +36,36 @@ export const DEFAULT_CONFIG: Required<Omit<EmbeddedOptionsConfig, 'version' | 'b
 
 /**
  * Configuration validation error with detailed message and field information.
+ *
+ * @param message - Human-readable error message
+ * @param field - The configuration field that failed validation
+ * @param messageKey - Optional i18n message key for future localization support
  */
 export class ConfigValidationError extends Error {
-  constructor(message: string, public field?: string) {
+  constructor(message: string, public field?: string, public messageKey?: string) {
     super(message);
     this.name = 'ConfigValidationError';
   }
 }
 
 /**
+ * Configuration Validation Functions
+ *
+ * All validation errors follow a consistent format:
+ * "The '<fieldname>' field <error detail>"
+ *
+ * This ensures consistent, parseable error messages for API users.
+ */
+
+/**
  * Validates host field
  */
 function validateHost(host: string): void {
   if (typeof host !== 'string') {
-    throw new ConfigValidationError('Host must be a string', 'host');
+    throw new ConfigValidationError("The 'host' field must be a string", 'host');
   }
   if (host.trim().length === 0) {
-    throw new ConfigValidationError('Host cannot be empty', 'host');
+    throw new ConfigValidationError("The 'host' field cannot be empty", 'host');
   }
   // Basic host format validation (IPv4, IPv6, or hostname)
   // IPv4: strict validation for each octet (0-255)
@@ -104,7 +117,7 @@ function validateHost(host: string): void {
 
   if (!ipv4Pattern.test(host) && !ipv6Pattern.test(host) && !hostnamePattern.test(host)) {
     throw new ConfigValidationError(
-      'Host must be a valid IPv4 address, IPv6 address, localhost, or hostname',
+      "The 'host' field must be a valid IPv4 address, IPv6 address, localhost, or hostname",
       'host'
     );
   }
@@ -115,13 +128,13 @@ function validateHost(host: string): void {
  */
 function validatePort(port: number): void {
   if (typeof port !== 'number') {
-    throw new ConfigValidationError('Port must be a number', 'port');
+    throw new ConfigValidationError("The 'port' field must be a number", 'port');
   }
   if (!Number.isInteger(port)) {
-    throw new ConfigValidationError('Port must be an integer', 'port');
+    throw new ConfigValidationError("The 'port' field must be an integer", 'port');
   }
   if (port < 1 || port > 65535) {
-    throw new ConfigValidationError('Port must be between 1 and 65535', 'port');
+    throw new ConfigValidationError("The 'port' field must be between 1 and 65535", 'port');
   }
 }
 
@@ -133,7 +146,7 @@ function validatePort(port: number): void {
  */
 function validateVersion(version: string, logger: Logger = defaultLogger): void {
   if (typeof version !== 'string') {
-    throw new ConfigValidationError('Version must be a string', 'version');
+    throw new ConfigValidationError("The 'version' field must be a string", 'version');
   }
 
   if (version === 'latest') {
@@ -153,7 +166,7 @@ function validateVersion(version: string, logger: Logger = defaultLogger): void 
 
   if (decodedVersion.includes('..') || decodedVersion.includes('/') || decodedVersion.includes('\\')) {
     throw new ConfigValidationError(
-      'Version contains invalid characters (path traversal attempt detected)',
+      "The 'version' field contains invalid characters (path traversal attempt detected)",
       'version'
     );
   }
@@ -172,7 +185,7 @@ function validateVersion(version: string, logger: Logger = defaultLogger): void 
   const versionPattern = /^(0|[1-9]\d*)\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$/;
   if (!versionPattern.test(version)) {
     throw new ConfigValidationError(
-      "Version must be 'latest' or follow semantic versioning format: " +
+      "The 'version' field must be 'latest' or follow semantic versioning format: " +
         '{major}.{minor}.{patch}[-prerelease][+build]',
       'version'
     );
@@ -205,17 +218,17 @@ function validateVersion(version: string, logger: Logger = defaultLogger): void 
  */
 function validateBinaryUrl(binaryUrl: string): void {
   if (typeof binaryUrl !== 'string') {
-    throw new ConfigValidationError('BinaryUrl must be a string', 'binaryUrl');
+    throw new ConfigValidationError("The 'binaryUrl' field must be a string", 'binaryUrl');
   }
   if (binaryUrl.trim().length === 0) {
-    throw new ConfigValidationError('BinaryUrl cannot be empty', 'binaryUrl');
+    throw new ConfigValidationError("The 'binaryUrl' field cannot be empty", 'binaryUrl');
   }
   // Basic URL format validation
   try {
     // eslint-disable-next-line no-new
     new URL(binaryUrl);
   } catch {
-    throw new ConfigValidationError('BinaryUrl must be a valid URL', 'binaryUrl');
+    throw new ConfigValidationError("The 'binaryUrl' field must be a valid URL", 'binaryUrl');
   }
 }
 
@@ -224,7 +237,7 @@ function validateBinaryUrl(binaryUrl: string): void {
  */
 function validateEnv(env: object): void {
   if (typeof env !== 'object' || env === null || Array.isArray(env)) {
-    throw new ConfigValidationError('Env must be an object', 'env');
+    throw new ConfigValidationError("The 'env' field must be an object", 'env');
   }
   // Validate that all env values are strings, numbers, or undefined
   for (const [key, value] of Object.entries(env)) {
@@ -235,8 +248,8 @@ function validateEnv(env: object): void {
       typeof value !== 'boolean'
     ) {
       throw new ConfigValidationError(
-        `Environment variable "${key}" must be a string, number, boolean, or undefined`,
-        'env'
+        `The 'env.${key}' field must be a string, number, boolean, or undefined`,
+        `env.${key}`
       );
     }
   }
@@ -277,7 +290,7 @@ export function validateOptions(
   // Validate mutual exclusivity of version and binaryUrl
   if (config.version !== undefined && config.binaryUrl !== undefined) {
     throw new ConfigValidationError(
-      'Cannot provide both version and binaryUrl - they are mutually exclusive',
+      "The 'version' and 'binaryUrl' fields are mutually exclusive - cannot provide both",
       'version/binaryUrl'
     );
   }

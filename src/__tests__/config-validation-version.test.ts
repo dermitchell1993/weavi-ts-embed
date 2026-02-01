@@ -22,7 +22,10 @@ import {
 describe('validateOptions - Version Validation', () => {
   describe('basic version validation', () => {
     it('rejects non-string version', () => {
-      expectInvalidConfig({ version: 123 } as unknown as EmbeddedOptionsConfig, 'Version must be a string');
+      expectInvalidConfig(
+        { version: 123 } as unknown as EmbeddedOptionsConfig,
+        "The 'version' field must be a string"
+      );
     });
 
     it('accepts standard semantic versions', () => {
@@ -54,7 +57,7 @@ describe('validateOptions - Version Validation', () => {
     it('provides clear error message for path traversal', () => {
       expectInvalidConfig(
         { version: '../test' },
-        'Version contains invalid characters (path traversal attempt detected)'
+        "The 'version' field contains invalid characters (path traversal attempt detected)"
       );
     });
   });
