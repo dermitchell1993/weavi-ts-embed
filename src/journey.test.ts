@@ -1,7 +1,22 @@
 import { describe, it, expect } from 'vitest';
 import { connectToEmbedded } from '.';
 import type { WeaviateClient } from 'weaviate-client';
+import { getRandomPort } from '../tests/helpers/processUtils';
 
+/**
+ * EmbeddedDB Configuration Tests
+ * 
+ * IMPORTANT: These tests validate different startup CONFIGURATIONS and cannot
+ * use the shared instance pattern. Each test verifies:
+ * - Different versions ('latest' vs specific)
+ * - Different download methods (version vs binaryUrl)
+ * - Different configurations (ports, env vars)
+ * 
+ * Shared instances only work for OPERATION tests (testing runtime behavior),
+ * not CONFIGURATION tests (testing startup variations).
+ * 
+ * See docs/test-architecture-analysis.md for detailed analysis.
+ */
 describe('embedded', () => {
   it('checks platform', () => {});
   if (process.platform != 'linux' && process.platform != 'darwin') {
@@ -15,13 +30,12 @@ describe('embedded', () => {
       throw new Error(`unexpected failure: ${err}`);
     });
     await client.embedded?.stop();
-    // Wait for the process to fully terminate before next test
-    await new Promise((resolve) => setTimeout(resolve, 500));
   }, 90000); // 90s timeout - allows for Weaviate's 60s startup + binary download/extraction buffer
 
   it('starts/stops EmbeddedDB with custom options', async () => {
+    const customPort = await getRandomPort();
     const client: WeaviateClient = await connectToEmbedded({
-      port: 7878,
+      port: customPort,
       version: '1.27.0', // Updated to v1.27.0 for v3 client compatibility (gRPC requirement)
       env: {
         QUERY_DEFAULTS_LIMIT: 50,
@@ -33,13 +47,12 @@ describe('embedded', () => {
       throw new Error(`unexpected failure: ${err}`);
     });
     await client.embedded?.stop();
-    // Wait for the process to fully terminate before next test
-    await new Promise((resolve) => setTimeout(resolve, 500));
   }, 90000); // 90s timeout - allows for Weaviate's 60s startup + binary download/extraction buffer
 
   it('starts/stops EmbeddedDB with latest version', async () => {
+    const latestPort = await getRandomPort();
     const client: WeaviateClient = await connectToEmbedded({
-      port: 7880,
+      port: latestPort,
       version: 'latest',
     });
     await checkClientServerConn(client).catch((err: any) => {
@@ -47,8 +60,6 @@ describe('embedded', () => {
       throw new Error(`unexpected error: ${err}`);
     });
     await client.embedded?.stop();
-    // Wait for the process to fully terminate before next test
-    await new Promise((resolve) => setTimeout(resolve, 500));
   }, 90000); // 90s timeout - allows for Weaviate's 60s startup + GitHub API call + binary download/extraction
 });
 
