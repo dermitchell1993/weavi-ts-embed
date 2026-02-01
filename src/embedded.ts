@@ -11,6 +11,8 @@ import { extract } from 'tar';
 import { createHash } from 'crypto';
 import Unzipper from 'adm-zip';
 
+import { Logger } from './types';
+
 const defaultBinaryPath = join(homedir(), '.cache/weaviate-embedded');
 const defaultPersistenceDataPath = join(homedir(), '.local/share/weaviate');
 const defaultVersion = 'latest';
@@ -21,6 +23,7 @@ export interface EmbeddedOptionsConfig {
   env?: object;
   version?: string;
   binaryUrl?: string;
+  logger?: Logger;
 }
 
 export class EmbeddedOptions {
