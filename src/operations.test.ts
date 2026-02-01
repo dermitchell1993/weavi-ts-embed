@@ -26,12 +26,14 @@ const getRandomPort = (): Promise<number> =>
   });
 
 // Verify connection with Raft leader election retry logic (based on journey.test.ts pattern)
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 async function verifyConnection(client: EmbeddedClient): Promise<void> {
   const maxRetries = 10;
   const retryDelay = 1500; // 1.5 seconds
   let lastError: Error | undefined;
 
-  // eslint-disable-next-line no-await-in-loop -- Sequential retries are intentional for connection verification
+  // Sequential retries are intentional for connection verification
+  /* eslint-disable no-await-in-loop */
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       // Create and delete a test collection to verify full connectivity
@@ -58,6 +60,7 @@ async function verifyConnection(client: EmbeddedClient): Promise<void> {
       }
     }
   }
+  /* eslint-enable no-await-in-loop */
 
   throw lastError || new Error('Connection verification failed');
 }
