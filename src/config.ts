@@ -35,13 +35,26 @@ export const DEFAULT_CONFIG: Required<Omit<EmbeddedOptionsConfig, 'version' | 'b
 
 /**
  * Configuration validation error with detailed message and field information.
+ *
+ * @param message - Human-readable error message
+ * @param field - The configuration field that failed validation
+ * @param messageKey - Optional i18n message key for future localization support
  */
 export class ConfigValidationError extends Error {
-  constructor(message: string, public field?: string) {
+  constructor(message: string, public field?: string, public messageKey?: string) {
     super(message);
     this.name = 'ConfigValidationError';
   }
 }
+
+/**
+ * Configuration Validation Functions
+ *
+ * All validation errors follow a consistent format:
+ * "The '<fieldname>' field <error detail>"
+ *
+ * This ensures consistent, parseable error messages for API users.
+ */
 
 /**
  * Validates host field
@@ -231,8 +244,8 @@ function validateEnv(env: object): void {
       typeof value !== 'boolean'
     ) {
       throw new ConfigValidationError(
-        `The 'env' field: environment variable "${key}" must be a string, number, boolean, or undefined`,
-        'env'
+        `The 'env.${key}' field must be a string, number, boolean, or undefined`,
+        `env.${key}`
       );
     }
   }
