@@ -246,11 +246,11 @@ export function getProcessMemoryUsage(pid?: number): {
  */
 /**
  * Get a random available port from the OS with retry logic
- * 
+ *
  * @param maxRetries Maximum number of retry attempts (default: 3)
  * @returns Promise resolving to an available port number
  * @throws Error if all retry attempts fail
- * 
+ *
  * @example
  * const port = await getRandomPort();
  * console.log(`Allocated port: ${port}`);
@@ -258,6 +258,7 @@ export function getProcessMemoryUsage(pid?: number): {
 export async function getRandomPort(maxRetries = 3): Promise<number> {
   for (let i = 0; i < maxRetries; i++) {
     try {
+      // eslint-disable-next-line no-await-in-loop
       return await new Promise<number>((resolve, reject) => {
         const server = net.createServer();
         server.listen(0, () => {
@@ -270,7 +271,8 @@ export async function getRandomPort(maxRetries = 3): Promise<number> {
     } catch (err) {
       if (i === maxRetries - 1) throw err;
       // Wait 100ms before retrying to avoid race conditions
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
   }
   throw new Error('Failed to allocate port after retries');
@@ -278,15 +280,15 @@ export async function getRandomPort(maxRetries = 3): Promise<number> {
 
 /**
  * Weaviate internal port configuration for parallel test execution
- * 
+ *
  * Allocates unique ports for Weaviate's internal services to prevent conflicts
  * when running multiple instances in parallel:
  * - Main port: Weaviate HTTP API
  * - GRPC port: gRPC server (default 50051)
  * - Profiling port: pprof debug server (default 6060)
- * 
+ *
  * @returns Promise resolving to port configuration object
- * 
+ *
  * @example
  * const ports = await getWeaviateInternalPorts();
  * const client = await connectToEmbedded({
@@ -302,12 +304,8 @@ export async function getWeaviateInternalPorts(): Promise<{
   grpc: number;
   profiling: number;
 }> {
-  const [main, grpc, profiling] = await Promise.all([
-    getRandomPort(),
-    getRandomPort(),
-    getRandomPort(),
-  ]);
-  
+  const [main, grpc, profiling] = await Promise.all([getRandomPort(), getRandomPort(), getRandomPort()]);
+
   return { main, grpc, profiling };
 }
 

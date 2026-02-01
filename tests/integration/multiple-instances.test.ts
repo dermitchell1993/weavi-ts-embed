@@ -116,12 +116,12 @@ describe('Multiple Instances Tests', () => {
       const ports2 = await getWeaviateInternalPorts();
 
       const [client1, client2] = await Promise.all([
-        connectToEmbedded({ 
+        connectToEmbedded({
           port: ports1.main,
           grpcPort: ports1.grpc,
           env: { GO_PROFILING_PORT: String(ports1.profiling) },
         }),
-        connectToEmbedded({ 
+        connectToEmbedded({
           port: ports2.main,
           grpcPort: ports2.grpc,
           env: { GO_PROFILING_PORT: String(ports2.profiling) },
@@ -167,17 +167,17 @@ describe('Multiple Instances Tests', () => {
       ]);
 
       const [client1, client2, client3] = await Promise.all([
-        connectToEmbedded({ 
+        connectToEmbedded({
           port: ports1.main,
           grpcPort: ports1.grpc,
           env: { GO_PROFILING_PORT: String(ports1.profiling) },
         }),
-        connectToEmbedded({ 
+        connectToEmbedded({
           port: ports2.main,
           grpcPort: ports2.grpc,
           env: { GO_PROFILING_PORT: String(ports2.profiling) },
         }),
-        connectToEmbedded({ 
+        connectToEmbedded({
           port: ports3.main,
           grpcPort: ports3.grpc,
           env: { GO_PROFILING_PORT: String(ports3.profiling) },
@@ -216,32 +216,40 @@ describe('Multiple Instances Tests', () => {
       const ports3 = await getWeaviateInternalPorts();
       const ports4 = await getWeaviateInternalPorts();
 
-      const client1 = trackClient(await connectToEmbedded({ 
-        port: ports1.main,
-        grpcPort: ports1.grpc,
-        env: { GO_PROFILING_PORT: String(ports1.profiling) },
-      }));
+      const client1 = trackClient(
+        await connectToEmbedded({
+          port: ports1.main,
+          grpcPort: ports1.grpc,
+          env: { GO_PROFILING_PORT: String(ports1.profiling) },
+        })
+      );
       expect(client1.embedded.pid, 'Client 1 should have a valid PID').toBeGreaterThan(0);
 
-      const client2 = trackClient(await connectToEmbedded({ 
-        port: ports2.main,
-        grpcPort: ports2.grpc,
-        env: { GO_PROFILING_PORT: String(ports2.profiling) },
-      }));
+      const client2 = trackClient(
+        await connectToEmbedded({
+          port: ports2.main,
+          grpcPort: ports2.grpc,
+          env: { GO_PROFILING_PORT: String(ports2.profiling) },
+        })
+      );
       expect(client2.embedded.pid, 'Client 2 should have a valid PID').toBeGreaterThan(0);
 
-      const client3 = trackClient(await connectToEmbedded({ 
-        port: ports3.main,
-        grpcPort: ports3.grpc,
-        env: { GO_PROFILING_PORT: String(ports3.profiling) },
-      }));
+      const client3 = trackClient(
+        await connectToEmbedded({
+          port: ports3.main,
+          grpcPort: ports3.grpc,
+          env: { GO_PROFILING_PORT: String(ports3.profiling) },
+        })
+      );
       expect(client3.embedded.pid, 'Client 3 should have a valid PID').toBeGreaterThan(0);
 
-      const client4 = trackClient(await connectToEmbedded({ 
-        port: ports4.main,
-        grpcPort: ports4.grpc,
-        env: { GO_PROFILING_PORT: String(ports4.profiling) },
-      }));
+      const client4 = trackClient(
+        await connectToEmbedded({
+          port: ports4.main,
+          grpcPort: ports4.grpc,
+          env: { GO_PROFILING_PORT: String(ports4.profiling) },
+        })
+      );
       expect(client4.embedded.pid, 'Client 4 should have a valid PID').toBeGreaterThan(0);
 
       // Verify all have unique PIDs
@@ -271,12 +279,12 @@ describe('Multiple Instances Tests', () => {
       const ports2 = await getWeaviateInternalPorts();
 
       const [client1, client2] = await Promise.all([
-        connectToEmbedded({ 
+        connectToEmbedded({
           port: ports1.main,
           grpcPort: ports1.grpc,
           env: { GO_PROFILING_PORT: String(ports1.profiling) },
         }),
-        connectToEmbedded({ 
+        connectToEmbedded({
           port: ports2.main,
           grpcPort: ports2.grpc,
           env: { GO_PROFILING_PORT: String(ports2.profiling) },
@@ -287,8 +295,12 @@ describe('Multiple Instances Tests', () => {
       trackClient(client2);
 
       // Verify port configuration
-      expect(client1.embedded.options.port, `Client 1 should be configured on port ${ports1.main}`).toBe(ports1.main);
-      expect(client2.embedded.options.port, `Client 2 should be configured on port ${ports2.main}`).toBe(ports2.main);
+      expect(client1.embedded.options.port, `Client 1 should be configured on port ${ports1.main}`).toBe(
+        ports1.main
+      );
+      expect(client2.embedded.options.port, `Client 2 should be configured on port ${ports2.main}`).toBe(
+        ports2.main
+      );
       expect(client1.embedded.options.port, 'Clients should be on different ports').not.toBe(
         client2.embedded.options.port
       );
@@ -302,11 +314,13 @@ describe('Multiple Instances Tests', () => {
     it('should prevent port conflicts when using same port', async () => {
       const ports = await getWeaviateInternalPorts();
 
-      const client1 = trackClient(await connectToEmbedded({ 
-        port: ports.main,
-        grpcPort: ports.grpc,
-        env: { GO_PROFILING_PORT: String(ports.profiling) },
-      }));
+      const client1 = trackClient(
+        await connectToEmbedded({
+          port: ports.main,
+          grpcPort: ports.grpc,
+          env: { GO_PROFILING_PORT: String(ports.profiling) },
+        })
+      );
       expect(client1.embedded.pid, 'First instance should start successfully').toBeGreaterThan(0);
       expect(
         isProcessRunning(client1.embedded.pid),
@@ -315,7 +329,7 @@ describe('Multiple Instances Tests', () => {
 
       // Attempting to start another instance on the same port should fail
       await expect(
-        connectToEmbedded({ 
+        connectToEmbedded({
           port: ports.main,
           grpcPort: ports.grpc,
           env: { GO_PROFILING_PORT: String(ports.profiling) },
@@ -327,7 +341,7 @@ describe('Multiple Instances Tests', () => {
     it('should verify gRPC port isolation with custom ports', async () => {
       const ports1 = await getWeaviateInternalPorts();
       const ports2 = await getWeaviateInternalPorts();
-      
+
       const client1 = trackClient(
         await connectToEmbedded({
           port: ports1.main,
@@ -388,16 +402,20 @@ describe('Multiple Instances Tests', () => {
     it('should use separate data directories for different instances', async () => {
       const ports1 = await getWeaviateInternalPorts();
       const ports2 = await getWeaviateInternalPorts();
-      const client1 = trackClient(await connectToEmbedded({ 
-        port: ports1.main,
-        grpcPort: ports1.grpc,
-        env: { GO_PROFILING_PORT: String(ports1.profiling) },
-      }));
-      const client2 = trackClient(await connectToEmbedded({ 
-        port: ports2.main,
-        grpcPort: ports2.grpc,
-        env: { GO_PROFILING_PORT: String(ports2.profiling) },
-      }));
+      const client1 = trackClient(
+        await connectToEmbedded({
+          port: ports1.main,
+          grpcPort: ports1.grpc,
+          env: { GO_PROFILING_PORT: String(ports1.profiling) },
+        })
+      );
+      const client2 = trackClient(
+        await connectToEmbedded({
+          port: ports2.main,
+          grpcPort: ports2.grpc,
+          env: { GO_PROFILING_PORT: String(ports2.profiling) },
+        })
+      );
 
       // Get persistence paths from environment
       const dataPath1 = client1.embedded.options.persistenceDataPath;
@@ -419,16 +437,20 @@ describe('Multiple Instances Tests', () => {
     it('should maintain data isolation between instances', async () => {
       const ports1 = await getWeaviateInternalPorts();
       const ports2 = await getWeaviateInternalPorts();
-      const client1 = trackClient(await connectToEmbedded({ 
-        port: ports1.main,
-        grpcPort: ports1.grpc,
-        env: { GO_PROFILING_PORT: String(ports1.profiling) },
-      }));
-      const client2 = trackClient(await connectToEmbedded({ 
-        port: ports2.main,
-        grpcPort: ports2.grpc,
-        env: { GO_PROFILING_PORT: String(ports2.profiling) },
-      }));
+      const client1 = trackClient(
+        await connectToEmbedded({
+          port: ports1.main,
+          grpcPort: ports1.grpc,
+          env: { GO_PROFILING_PORT: String(ports1.profiling) },
+        })
+      );
+      const client2 = trackClient(
+        await connectToEmbedded({
+          port: ports2.main,
+          grpcPort: ports2.grpc,
+          env: { GO_PROFILING_PORT: String(ports2.profiling) },
+        })
+      );
 
       // Create a collection in instance 1
       const collectionName1 = 'Instance1Collection';
@@ -497,16 +519,20 @@ describe('Multiple Instances Tests', () => {
     it('should perform concurrent write operations without interference', async () => {
       const ports1 = await getWeaviateInternalPorts();
       const ports2 = await getWeaviateInternalPorts();
-      const client1 = trackClient(await connectToEmbedded({ 
-        port: ports1.main,
-        grpcPort: ports1.grpc,
-        env: { GO_PROFILING_PORT: String(ports1.profiling) },
-      }));
-      const client2 = trackClient(await connectToEmbedded({ 
-        port: ports2.main,
-        grpcPort: ports2.grpc,
-        env: { GO_PROFILING_PORT: String(ports2.profiling) },
-      }));
+      const client1 = trackClient(
+        await connectToEmbedded({
+          port: ports1.main,
+          grpcPort: ports1.grpc,
+          env: { GO_PROFILING_PORT: String(ports1.profiling) },
+        })
+      );
+      const client2 = trackClient(
+        await connectToEmbedded({
+          port: ports2.main,
+          grpcPort: ports2.grpc,
+          env: { GO_PROFILING_PORT: String(ports2.profiling) },
+        })
+      );
 
       // Create collections in both instances
       const collectionName = 'TestArticle';
@@ -557,16 +583,20 @@ describe('Multiple Instances Tests', () => {
     it('should perform concurrent read operations without interference', async () => {
       const ports1 = await getWeaviateInternalPorts();
       const ports2 = await getWeaviateInternalPorts();
-      const client1 = trackClient(await connectToEmbedded({ 
-        port: ports1.main,
-        grpcPort: ports1.grpc,
-        env: { GO_PROFILING_PORT: String(ports1.profiling) },
-      }));
-      const client2 = trackClient(await connectToEmbedded({ 
-        port: ports2.main,
-        grpcPort: ports2.grpc,
-        env: { GO_PROFILING_PORT: String(ports2.profiling) },
-      }));
+      const client1 = trackClient(
+        await connectToEmbedded({
+          port: ports1.main,
+          grpcPort: ports1.grpc,
+          env: { GO_PROFILING_PORT: String(ports1.profiling) },
+        })
+      );
+      const client2 = trackClient(
+        await connectToEmbedded({
+          port: ports2.main,
+          grpcPort: ports2.grpc,
+          env: { GO_PROFILING_PORT: String(ports2.profiling) },
+        })
+      );
 
       // Create and populate collections
       const collectionName = 'ReadTestCollection';
@@ -619,16 +649,20 @@ describe('Multiple Instances Tests', () => {
     it('should stop instances independently', async () => {
       const ports1 = await getWeaviateInternalPorts();
       const ports2 = await getWeaviateInternalPorts();
-      const client1 = trackClient(await connectToEmbedded({ 
-        port: ports1.main,
-        grpcPort: ports1.grpc,
-        env: { GO_PROFILING_PORT: String(ports1.profiling) },
-      }));
-      const client2 = trackClient(await connectToEmbedded({ 
-        port: ports2.main,
-        grpcPort: ports2.grpc,
-        env: { GO_PROFILING_PORT: String(ports2.profiling) },
-      }));
+      const client1 = trackClient(
+        await connectToEmbedded({
+          port: ports1.main,
+          grpcPort: ports1.grpc,
+          env: { GO_PROFILING_PORT: String(ports1.profiling) },
+        })
+      );
+      const client2 = trackClient(
+        await connectToEmbedded({
+          port: ports2.main,
+          grpcPort: ports2.grpc,
+          env: { GO_PROFILING_PORT: String(ports2.profiling) },
+        })
+      );
 
       const pid1 = client1.embedded.pid;
       const pid2 = client2.embedded.pid;
@@ -698,21 +732,27 @@ describe('Multiple Instances Tests', () => {
       const ports1 = await getWeaviateInternalPorts();
       const ports2 = await getWeaviateInternalPorts();
       const ports3 = await getWeaviateInternalPorts();
-      const client1 = trackClient(await connectToEmbedded({ 
-        port: ports1.main,
-        grpcPort: ports1.grpc,
-        env: { GO_PROFILING_PORT: String(ports1.profiling) },
-      }));
-      const client2 = trackClient(await connectToEmbedded({ 
-        port: ports2.main,
-        grpcPort: ports2.grpc,
-        env: { GO_PROFILING_PORT: String(ports2.profiling) },
-      }));
-      const client3 = trackClient(await connectToEmbedded({ 
-        port: ports3.main,
-        grpcPort: ports3.grpc,
-        env: { GO_PROFILING_PORT: String(ports3.profiling) },
-      }));
+      const client1 = trackClient(
+        await connectToEmbedded({
+          port: ports1.main,
+          grpcPort: ports1.grpc,
+          env: { GO_PROFILING_PORT: String(ports1.profiling) },
+        })
+      );
+      const client2 = trackClient(
+        await connectToEmbedded({
+          port: ports2.main,
+          grpcPort: ports2.grpc,
+          env: { GO_PROFILING_PORT: String(ports2.profiling) },
+        })
+      );
+      const client3 = trackClient(
+        await connectToEmbedded({
+          port: ports3.main,
+          grpcPort: ports3.grpc,
+          env: { GO_PROFILING_PORT: String(ports3.profiling) },
+        })
+      );
 
       // Create collections concurrently
       await Promise.all([
