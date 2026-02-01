@@ -17,7 +17,7 @@ describe('embedded', () => {
     await client.embedded?.stop();
     // Wait for the process to fully terminate before next test
     await new Promise((resolve) => setTimeout(resolve, 500));
-  }, 60000); // 60s timeout - optimized with binary caching and concurrent download prevention
+  }, 90000); // 90s timeout - allows for Weaviate's 60s startup + binary download/extraction buffer
 
   it('starts/stops EmbeddedDB with custom options', async () => {
     const client: WeaviateClient = await connectToEmbedded({
@@ -35,7 +35,7 @@ describe('embedded', () => {
     await client.embedded?.stop();
     // Wait for the process to fully terminate before next test
     await new Promise((resolve) => setTimeout(resolve, 500));
-  }, 60000); // 60s timeout - optimized with binary caching and concurrent download prevention
+  }, 90000); // 90s timeout - allows for Weaviate's 60s startup + binary download/extraction buffer
 
   it('starts/stops EmbeddedDB with latest version', async () => {
     const client: WeaviateClient = await connectToEmbedded({
@@ -49,7 +49,7 @@ describe('embedded', () => {
     await client.embedded?.stop();
     // Wait for the process to fully terminate before next test
     await new Promise((resolve) => setTimeout(resolve, 500));
-  }, 60000); // 60s timeout - optimized with binary caching and concurrent download prevention
+  }, 90000); // 90s timeout - allows for Weaviate's 60s startup + GitHub API call + binary download/extraction
 });
 
 // Checks communication between the client and embedded server
