@@ -17,6 +17,7 @@
     "test": "vitest run",
     "test:unit": "VITEST_POOL=threads vitest run src/unit.test.ts src/platform.test.ts",
     "test:integration": "VITEST_POOL=threads VITEST_SINGLE_THREAD=true vitest run src/journey.test.ts tests/integration/env-vars.test.ts tests/integration/port-conflicts.test.ts",
+    "test:downloads": "VITEST_POOL=threads vitest run tests/integration/downloads.test.ts",
     "test:port": "VITEST_POOL=threads VITEST_SINGLE_THREAD=true vitest run tests/integration/port-conflicts.test.ts",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
