@@ -5,6 +5,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     testTimeout: 60000,
+    setupFiles: ['test/setup/suiteTimeout.ts'],
     // Run test files sequentially to prevent resource contention
     fileParallelism: 1,
     // Use threads for parallelization but limit for integration tests
