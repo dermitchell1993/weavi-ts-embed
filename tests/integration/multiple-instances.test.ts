@@ -21,17 +21,7 @@
 
 import { describe, it, expect, afterEach } from 'vitest';
 import { connectToEmbedded, EmbeddedClient } from '../../src/index';
-
-/**
- * Port allocation helper to prevent conflicts in CI/parallel test runs
- * Starts from 8001 and increments to avoid collisions
- */
-let nextPort = 8001;
-const allocatePort = (): number => {
-  const port = nextPort;
-  nextPort += 1;
-  return port;
-};
+import { getRandomPort } from '../helpers/processUtils';
 
 /**
  * Helper to verify a process is actually running by PID
@@ -116,8 +106,8 @@ describe('Multiple Instances Tests', () => {
 
   describe('Concurrent Instance Creation', () => {
     it('should successfully start 2 instances simultaneously', async () => {
-      const port1 = allocatePort();
-      const port2 = allocatePort();
+      const port1 = await getRandomPort();
+      const port2 = await getRandomPort();
 
       const [client1, client2] = await Promise.all([
         connectToEmbedded({ port: port1 }),
@@ -156,7 +146,7 @@ describe('Multiple Instances Tests', () => {
     }, 120000);
 
     it('should successfully start 3 instances simultaneously', async () => {
-      const ports = [allocatePort(), allocatePort(), allocatePort()];
+      const ports = await Promise.all([getRandomPort(), getRandomPort(), getRandomPort()]);
 
       const [client1, client2, client3] = await Promise.all([
         connectToEmbedded({ port: ports[0] }),
@@ -191,10 +181,10 @@ describe('Multiple Instances Tests', () => {
     }, 180000);
 
     it('should start 4 instances sequentially', async () => {
-      const port1 = allocatePort();
-      const port2 = allocatePort();
-      const port3 = allocatePort();
-      const port4 = allocatePort();
+      const port1 = await getRandomPort();
+      const port2 = await getRandomPort();
+      const port3 = await getRandomPort();
+      const port4 = await getRandomPort();
 
       const client1 = trackClient(await connectToEmbedded({ port: port1 }));
       expect(client1.embedded.pid, 'Client 1 should have a valid PID').toBeGreaterThan(0);
@@ -231,8 +221,8 @@ describe('Multiple Instances Tests', () => {
 
   describe('Port Isolation', () => {
     it('should verify instances listen on different ports', async () => {
-      const port1 = allocatePort();
-      const port2 = allocatePort();
+      const port1 = await getRandomPort();
+      const port2 = await getRandomPort();
 
       const [client1, client2] = await Promise.all([
         connectToEmbedded({ port: port1 }),
@@ -256,7 +246,7 @@ describe('Multiple Instances Tests', () => {
     }, 120000);
 
     it('should prevent port conflicts when using same port', async () => {
-      const port = allocatePort();
+      const port = await getRandomPort();
 
       const client1 = trackClient(await connectToEmbedded({ port }));
       expect(client1.embedded.pid, 'First instance should start successfully').toBeGreaterThan(0);
@@ -273,17 +263,22 @@ describe('Multiple Instances Tests', () => {
     }, 120000);
 
     it('should verify gRPC port isolation with custom ports', async () => {
+      const port1 = await getRandomPort();
+      const port2 = await getRandomPort();
+      const grpcPort1 = await getRandomPort();
+      const grpcPort2 = await getRandomPort();
+      
       const client1 = trackClient(
         await connectToEmbedded({
-          port: 8013,
-          grpcPort: 50061,
+          port: port1,
+          grpcPort: grpcPort1,
         })
       );
 
       const client2 = trackClient(
         await connectToEmbedded({
-          port: 8014,
-          grpcPort: 50062,
+          port: port2,
+          grpcPort: grpcPort2,
         })
       );
 
@@ -329,8 +324,10 @@ describe('Multiple Instances Tests', () => {
 
   describe('Data Directory Isolation', () => {
     it('should use separate data directories for different instances', async () => {
-      const client1 = trackClient(await connectToEmbedded({ port: 8015 }));
-      const client2 = trackClient(await connectToEmbedded({ port: 8016 }));
+      const port1 = await getRandomPort();
+      const port2 = await getRandomPort();
+      const client1 = trackClient(await connectToEmbedded({ port: port1 }));
+      const client2 = trackClient(await connectToEmbedded({ port: port2 }));
 
       // Get persistence paths from environment
       const dataPath1 = client1.embedded.options.persistenceDataPath;
@@ -350,8 +347,10 @@ describe('Multiple Instances Tests', () => {
     }, 120000);
 
     it('should maintain data isolation between instances', async () => {
-      const client1 = trackClient(await connectToEmbedded({ port: 8017 }));
-      const client2 = trackClient(await connectToEmbedded({ port: 8018 }));
+      const port1 = await getRandomPort();
+      const port2 = await getRandomPort();
+      const client1 = trackClient(await connectToEmbedded({ port: port1 }));
+      const client2 = trackClient(await connectToEmbedded({ port: port2 }));
 
       // Create a collection in instance 1
       const collectionName1 = 'Instance1Collection';
@@ -418,8 +417,10 @@ describe('Multiple Instances Tests', () => {
 
   describe('Independent Operations', () => {
     it('should perform concurrent write operations without interference', async () => {
-      const client1 = trackClient(await connectToEmbedded({ port: 8019 }));
-      const client2 = trackClient(await connectToEmbedded({ port: 8020 }));
+      const port1 = await getRandomPort();
+      const port2 = await getRandomPort();
+      const client1 = trackClient(await connectToEmbedded({ port: port1 }));
+      const client2 = trackClient(await connectToEmbedded({ port: port2 }));
 
       // Create collections in both instances
       const collectionName = 'TestArticle';
@@ -468,8 +469,10 @@ describe('Multiple Instances Tests', () => {
     }, 150000);
 
     it('should perform concurrent read operations without interference', async () => {
-      const client1 = trackClient(await connectToEmbedded({ port: 8021 }));
-      const client2 = trackClient(await connectToEmbedded({ port: 8022 }));
+      const port1 = await getRandomPort();
+      const port2 = await getRandomPort();
+      const client1 = trackClient(await connectToEmbedded({ port: port1 }));
+      const client2 = trackClient(await connectToEmbedded({ port: port2 }));
 
       // Create and populate collections
       const collectionName = 'ReadTestCollection';
@@ -520,8 +523,10 @@ describe('Multiple Instances Tests', () => {
 
   describe('Instance Lifecycle Management', () => {
     it('should stop instances independently', async () => {
-      const client1 = trackClient(await connectToEmbedded({ port: 8023 }));
-      const client2 = trackClient(await connectToEmbedded({ port: 8024 }));
+      const port1 = await getRandomPort();
+      const port2 = await getRandomPort();
+      const client1 = trackClient(await connectToEmbedded({ port: port1 }));
+      const client2 = trackClient(await connectToEmbedded({ port: port2 }));
 
       const pid1 = client1.embedded.pid;
       const pid2 = client2.embedded.pid;
@@ -588,9 +593,12 @@ describe('Multiple Instances Tests', () => {
     }, 300000);
 
     it('should handle concurrent operations across multiple instances', async () => {
-      const client1 = trackClient(await connectToEmbedded({ port: 8040 }));
-      const client2 = trackClient(await connectToEmbedded({ port: 8041 }));
-      const client3 = trackClient(await connectToEmbedded({ port: 8042 }));
+      const port1 = await getRandomPort();
+      const port2 = await getRandomPort();
+      const port3 = await getRandomPort();
+      const client1 = trackClient(await connectToEmbedded({ port: port1 }));
+      const client2 = trackClient(await connectToEmbedded({ port: port2 }));
+      const client3 = trackClient(await connectToEmbedded({ port: port3 }));
 
       // Create collections concurrently
       await Promise.all([

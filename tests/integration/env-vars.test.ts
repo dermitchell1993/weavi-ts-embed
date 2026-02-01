@@ -28,6 +28,7 @@ import { connectToEmbedded, EmbeddedClient, EmbeddedOptions } from '../../src/in
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { mkdirSync, rmSync, existsSync } from 'fs';
+import { getRandomPort } from '../helpers/processUtils';
 
 /**
  * Helper function to create a unique test data directory
@@ -221,13 +222,14 @@ describe('Environment Variable Configuration Tests', () => {
     }, 10000); // Config-only test
 
     it('should start embedded instance with custom env vars and verify connectivity', async () => {
+      const testPort = await getRandomPort();
       const customEnv = {
         QUERY_DEFAULTS_LIMIT: '75',
         PERSISTENCE_DATA_PATH: testDataDir,
       };
 
       client = await connectToEmbedded({
-        port: 7892,
+        port: testPort,
         env: customEnv,
       });
 
@@ -235,10 +237,11 @@ describe('Environment Variable Configuration Tests', () => {
       await verifyClientConnection(client);
     }, 10000); // Config-only test
 
-    it('should handle custom CLUSTER_HOSTNAME environment variable', () => {
+    it('should handle custom CLUSTER_HOSTNAME environment variable', async () => {
+      const testPort = await getRandomPort();
       const customHostname = 'test-embedded-cluster';
       const options = new EmbeddedOptions({
-        port: 7893,
+        port: testPort,
         env: {
           CLUSTER_HOSTNAME: customHostname,
         },
@@ -281,10 +284,11 @@ describe('Environment Variable Configuration Tests', () => {
     }, 10000); // Config-only test
 
     it('should create persistence directory if it does not exist', async () => {
+      const testPort = await getRandomPort();
       const customPath = join(testDataDir, 'auto-created-persistence');
 
       client = await connectToEmbedded({
-        port: 7894,
+        port: testPort,
         env: {
           PERSISTENCE_DATA_PATH: customPath,
         },
@@ -331,11 +335,12 @@ describe('Environment Variable Configuration Tests', () => {
     }, 10000); // Config-only test
 
     it('should start embedded instance with custom persistence path', async () => {
+      const testPort = await getRandomPort();
       const customPersistencePath = join(testDataDir, 'test-persistence');
       mkdirSync(customPersistencePath, { recursive: true });
 
       client = await connectToEmbedded({
-        port: 7895,
+        port: testPort,
         env: {
           PERSISTENCE_DATA_PATH: customPersistencePath,
         },
