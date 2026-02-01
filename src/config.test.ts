@@ -8,7 +8,7 @@
  * - prepareConfig(): complete validation pipeline
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   validateOptions,
   applyDefaults,
@@ -284,6 +284,160 @@ describe('Configuration Validator', () => {
         expect(() => validateOptions({ version: '1.0.01' })).not.toThrow();
         expect(() => validateOptions({ version: '1.01.01' })).not.toThrow();
         expect(() => validateOptions({ version: '10.001.2' })).not.toThrow();
+      });
+    });
+
+    describe('version validation - pre-release tags', () => {
+      it('accepts alpha pre-releases', () => {
+        expect(() => validateOptions({ version: '1.0.0-alpha' })).not.toThrow();
+        expect(() => validateOptions({ version: '1.0.0-alpha.1' })).not.toThrow();
+        expect(() => validateOptions({ version: '2.3.4-alpha.beta' })).not.toThrow();
+      });
+
+      it('accepts beta pre-releases', () => {
+        expect(() => validateOptions({ version: '1.0.0-beta' })).not.toThrow();
+        expect(() => validateOptions({ version: '1.0.0-beta.2' })).not.toThrow();
+        expect(() => validateOptions({ version: '1.0.0-beta.11.ee' })).not.toThrow();
+      });
+
+      it('accepts release candidate pre-releases', () => {
+        expect(() => validateOptions({ version: '1.0.0-rc.1' })).not.toThrow();
+        expect(() => validateOptions({ version: '1.23.7-rc.2' })).not.toThrow();
+        expect(() => validateOptions({ version: '2.0.0-rc.final' })).not.toThrow();
+      });
+
+      it('accepts numeric pre-release identifiers', () => {
+        expect(() => validateOptions({ version: '1.0.0-0.3.7' })).not.toThrow();
+        expect(() => validateOptions({ version: '1.0.0-x.7.z.92' })).not.toThrow();
+      });
+
+      it('accepts pre-release identifiers with hyphens', () => {
+        expect(() => validateOptions({ version: '1.0.0-alpha-test' })).not.toThrow();
+        expect(() => validateOptions({ version: '1.0.0-rc-1-beta-2' })).not.toThrow();
+        expect(() => validateOptions({ version: '1.23.7-pre-release-candidate' })).not.toThrow();
+      });
+
+      it('accepts 0.x.x pre-release versions', () => {
+        expect(() => validateOptions({ version: '0.1.0-alpha' })).not.toThrow();
+        expect(() => validateOptions({ version: '0.23.7-rc.1' })).not.toThrow();
+      });
+    });
+
+    describe('version validation - build metadata', () => {
+      it('accepts build numbers', () => {
+        expect(() => validateOptions({ version: '1.0.0+build.1' })).not.toThrow();
+        expect(() => validateOptions({ version: '1.0.0+build.123' })).not.toThrow();
+        expect(() => validateOptions({ version: '1.23.7+456' })).not.toThrow();
+      });
+
+      it('accepts timestamp build metadata', () => {
+        expect(() => validateOptions({ version: '1.0.0+20130313144700' })).not.toThrow();
+        expect(() => validateOptions({ version: '1.0.0+20230615' })).not.toThrow();
+      });
+
+      it('accepts mixed build metadata', () => {
+        expect(() => validateOptions({ version: '1.0.0+exp.sha.5114f85' })).not.toThrow();
+        expect(() => validateOptions({ version: '1.0.0+build.v3.2.1' })).not.toThrow();
+      });
+
+      it('accepts 0.x.x with build metadata', () => {
+        expect(() => validateOptions({ version: '0.1.0+build.1' })).not.toThrow();
+        expect(() => validateOptions({ version: '0.23.7+20230615' })).not.toThrow();
+      });
+    });
+
+    describe('version validation - combined pre-release and build', () => {
+      it('accepts pre-release with build metadata', () => {
+        expect(() => validateOptions({ version: '1.0.0-alpha+001' })).not.toThrow();
+        expect(() => validateOptions({ version: '1.0.0-beta.2+build.456' })).not.toThrow();
+        expect(() => validateOptions({ version: '1.0.0-rc.1+20130313144700' })).not.toThrow();
+      });
+
+      it('accepts 0.x.x combined versions', () => {
+        expect(() => validateOptions({ version: '0.1.0-alpha+build.1' })).not.toThrow();
+      });
+
+      it('maintains correct order: version-prerelease+build', () => {
+        expect(() => validateOptions({ version: '1.0.0-rc.1+build' })).not.toThrow();
+        // Note: Regex cannot enforce semantic ordering - '1.0.0+build-rc.1' passes regex
+        // but violates semver semantics (build should not contain pre-release marker)
+        // This is a known limitation of regex-based validation
+      });
+    });
+
+    describe('version validation - warnings for unusual patterns', () => {
+      it('warns about 0.x.x versions (development phase)', () => {
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+        validateOptions({ version: '0.1.0' });
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('0.1.0 has major version 0.x.x'));
+
+        validateOptions({ version: '0.23.7-rc.1' });
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('0.23.7-rc.1 has major version 0.x.x'));
+
+        warnSpy.mockRestore();
+      });
+
+      it('warns about build metadata without pre-release', () => {
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+        validateOptions({ version: '1.0.0+build.123' });
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringContaining('includes build metadata without pre-release tag')
+        );
+
+        warnSpy.mockRestore();
+      });
+
+      it('does not warn for standard stable versions', () => {
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+        validateOptions({ version: '1.0.0' });
+        validateOptions({ version: '2.3.4' });
+        expect(warnSpy).not.toHaveBeenCalled();
+
+        warnSpy.mockRestore();
+      });
+
+      it('does not warn for pre-release with build metadata', () => {
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+        validateOptions({ version: '1.0.0-rc.1+build.123' });
+        // Should only warn once for any 0.x.x check, not for build metadata
+        expect(warnSpy).not.toHaveBeenCalledWith(
+          expect.stringContaining('includes build metadata without pre-release tag')
+        );
+
+        warnSpy.mockRestore();
+      });
+    });
+
+    describe('version validation - invalid semver', () => {
+      it('rejects pre-release without core version', () => {
+        expect(() => validateOptions({ version: '-alpha' })).toThrow(ConfigValidationError);
+        expect(() => validateOptions({ version: '-rc.1' })).toThrow(ConfigValidationError);
+      });
+
+      it('rejects build metadata without core version', () => {
+        expect(() => validateOptions({ version: '+build.1' })).toThrow(ConfigValidationError);
+        expect(() => validateOptions({ version: '+20230615' })).toThrow(ConfigValidationError);
+      });
+
+      it('rejects empty pre-release/build components', () => {
+        expect(() => validateOptions({ version: '1.0.0-' })).toThrow(ConfigValidationError);
+        expect(() => validateOptions({ version: '1.0.0+' })).toThrow(ConfigValidationError);
+        expect(() => validateOptions({ version: '1.0.0-+' })).toThrow(ConfigValidationError);
+      });
+
+      it('rejects underscores in pre-release identifiers (semver spec compliance)', () => {
+        // Per semver 2.0.0 spec section 9: identifiers must be [0-9A-Za-z-] only
+        expect(() => validateOptions({ version: '1.0.0-alpha_beta' })).toThrow(ConfigValidationError);
+        expect(() => validateOptions({ version: '1.0.0-rc_1' })).toThrow(ConfigValidationError);
+      });
+
+      it('rejects underscores in build metadata (semver spec compliance)', () => {
+        expect(() => validateOptions({ version: '1.0.0+build_123' })).toThrow(ConfigValidationError);
+        expect(() => validateOptions({ version: '1.0.0+sha_5114f85' })).toThrow(ConfigValidationError);
       });
     });
 

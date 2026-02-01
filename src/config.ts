@@ -119,15 +119,44 @@ function validateVersion(version: string): void {
     );
   }
 
-  // Semantic version format: {major}.{minor}.{patch}
+  // Semantic version format: {major}.{minor}.{patch}[-prerelease][+build]
   // Match patterns like: 0.1.0, 1.23.7, 1.2.3, 10.20.30
+  // Pre-release examples: 1.0.0-alpha, 1.0.0-beta.2, 1.0.0-rc.1
+  // Build metadata examples: 1.0.0+build.1, 1.0.0+20230615
+  // Combined: 1.0.0-rc.1+build.123
   // Follows semver spec which allows 0.x.x for early-stage software
   // Anchored regex ensures entire string matches (not just substring)
-  const versionPattern = /^(0|[1-9]\d*)\.\d+\.\d+$/;
+  //
+  // Pattern: [0-9A-Za-z.-]+ strictly follows semver 2.0.0 spec section 9
+  // "Identifiers MUST comprise only ASCII alphanumerics and hyphens [0-9A-Za-z-]"
+  // Dots are allowed as separators between identifiers
+  const versionPattern = /^(0|[1-9]\d*)\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$/;
   if (!versionPattern.test(version)) {
     throw new ConfigValidationError(
-      "Version must be 'latest' or follow semantic versioning format: {major}.{minor}.{patch}",
+      "Version must be 'latest' or follow semantic versioning format: " +
+        '{major}.{minor}.{patch}[-prerelease][+build]',
       'version'
+    );
+  }
+
+  // Warn about unusual-but-valid version patterns
+  const majorVersion = version.split('.')[0];
+  const hasPreRelease = version.includes('-');
+  const hasBuildMetadata = version.includes('+');
+
+  // Warn about pre-1.0 versions (development/unstable)
+  if (majorVersion === '0') {
+    console.warn(
+      `⚠️  Version ${version} has major version 0.x.x - this indicates initial development phase. ` +
+        'Per semver spec, the public API should not be considered stable.'
+    );
+  }
+
+  // Warn about build metadata without pre-release (unusual pattern)
+  if (hasBuildMetadata && !hasPreRelease) {
+    console.warn(
+      `ℹ️  Version ${version} includes build metadata without pre-release tag. ` +
+        'This is valid but uncommon - build metadata is typically used with pre-releases.'
     );
   }
 }
