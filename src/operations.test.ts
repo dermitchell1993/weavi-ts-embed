@@ -5,7 +5,7 @@
  * Pattern: One Weaviate startup, 15+ tests, complete in 2-4 minutes.
  */
 import { describe, it, expect, beforeAll, afterEach, afterAll } from 'vitest';
-import weaviate, { EmbeddedClient, EmbeddedOptions } from './index';
+import weaviate, { EmbeddedClient, EmbeddedOptions } from '.';
 import * as net from 'net';
 
 let sharedClient: EmbeddedClient;
