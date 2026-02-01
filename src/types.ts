@@ -173,3 +173,62 @@ export interface HealthCheckConfig {
    */
   silent?: boolean;
 }
+
+/**
+ * Logger interface for configurable logging throughout the library.
+ *
+ * Users can provide a custom logger implementation to control how warnings,
+ * errors, and informational messages are handled. This is particularly useful
+ * for:
+ * - Suppressing warnings in production environments
+ * - Integrating with custom logging systems (Winston, Bunyan, etc.)
+ * - Testing without console noise
+ *
+ * If not provided, the library will use console methods by default.
+ *
+ * @example
+ * ```typescript
+ * // Suppress all logging
+ * const silentLogger: Logger = {
+ *   warn: () => {},
+ *   error: () => {},
+ *   info: () => {}
+ * };
+ *
+ * // Custom logging integration
+ * const customLogger: Logger = {
+ *   warn: (msg) => myLogSystem.warning(msg),
+ *   error: (msg) => myLogSystem.error(msg),
+ *   info: (msg) => myLogSystem.info(msg)
+ * };
+ * ```
+ */
+export interface Logger {
+  /**
+   * Log a warning message.
+   * Used for non-critical issues that users should be aware of.
+   */
+  warn(message: string): void;
+
+  /**
+   * Log an error message.
+   * Used for critical issues that may affect functionality.
+   */
+  error(message: string): void;
+
+  /**
+   * Log an informational message.
+   * Used for general informational messages.
+   */
+  info(message: string): void;
+}
+
+/**
+ * Default logger implementation that uses console methods.
+ * This is used when no custom logger is provided.
+ */
+export const defaultLogger: Logger = {
+  warn: (message: string) => console.warn(message),
+  error: (message: string) => console.error(message),
+  info: (message: string) => console.info(message),
+};
