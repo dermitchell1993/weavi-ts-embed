@@ -6,6 +6,8 @@ export default defineConfig({
     environment: 'node',
     testTimeout: 60000,
     setupFiles: ['test/setup/suiteTimeout.ts'],
+    // Run test files sequentially to prevent resource contention
+    fileParallelism: 1,
     // Use threads for parallelization but limit for integration tests
     pool: process.env.VITEST_POOL || 'threads',
     maxThreads: process.env.CI ? 2 : 4,
@@ -22,6 +24,6 @@ export default defineConfig({
     },
     // Optimize for CI
     reporters: process.env.CI ? ['verbose'] : ['default'],
-    logHeapUsage: process.env.CI ? true : false,
+    logHeapUsage: !!process.env.CI,
   },
 });

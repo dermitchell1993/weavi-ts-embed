@@ -1,6 +1,22 @@
 import { describe, it, expect } from 'vitest';
-import weaviate, { EmbeddedClient, EmbeddedOptions } from '.';
+import { connectToEmbedded } from '.';
+import type { WeaviateClient } from 'weaviate-client';
+import { getRandomPort } from '../tests/helpers/processUtils';
 
+/**
+ * EmbeddedDB Configuration Tests
+ *
+ * IMPORTANT: These tests validate different startup CONFIGURATIONS and cannot
+ * use the shared instance pattern. Each test verifies:
+ * - Different versions ('latest' vs specific)
+ * - Different download methods (version vs binaryUrl)
+ * - Different configurations (ports, env vars)
+ *
+ * Shared instances only work for OPERATION tests (testing runtime behavior),
+ * not CONFIGURATION tests (testing startup variations).
+ *
+ * See docs/test-architecture-analysis.md for detailed analysis.
+ */
 describe('embedded', () => {
   it('checks platform', () => {});
   if (process.platform != 'linux' && process.platform != 'darwin') {
@@ -9,112 +25,60 @@ describe('embedded', () => {
   }
 
   it('starts/stops EmbeddedDB with default options', async () => {
-    const client: EmbeddedClient = await weaviate.client(new EmbeddedOptions());
+    const client: WeaviateClient = await connectToEmbedded();
     await checkClientServerConn(client).catch((err: any) => {
       throw new Error(`unexpected failure: ${err}`);
     });
-    client.embedded.stop();
-    // Wait for the process to fully terminate before next test
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-  }, 120000); // Increased timeout to 120s for embedded DB startup
+    await client.embedded?.stop();
+  }, 90000); // 90s timeout - allows for Weaviate's 60s startup + binary download/extraction buffer
 
   it('starts/stops EmbeddedDB with custom options', async () => {
-    const client: EmbeddedClient = await weaviate.client(
-      new EmbeddedOptions({
-        port: 7878,
-        version: '1.27.0', // Updated to v1.27.0 for v3 client compatibility (gRPC requirement)
-        env: {
-          QUERY_DEFAULTS_LIMIT: 50,
-          DEFAULT_VECTORIZER_MODULE: 'text2vec-openai',
-        },
-      }),
-      {
-        scheme: 'http',
-        host: '127.0.0.1:7878',
-      }
-    );
+    const customPort = await getRandomPort();
+    const client: WeaviateClient = await connectToEmbedded({
+      port: customPort,
+      version: '1.27.0', // Updated to v1.27.0 for v3 client compatibility (gRPC requirement)
+      env: {
+        QUERY_DEFAULTS_LIMIT: 50,
+        DEFAULT_VECTORIZER_MODULE: 'text2vec-openai',
+      },
+    });
     await checkClientServerConn(client).catch((err: any) => {
-      client.embedded.stop();
+      client.embedded?.stop();
       throw new Error(`unexpected failure: ${err}`);
     });
-    client.embedded.stop();
-    // Wait for the process to fully terminate before next test
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-  }, 120000); // Increased timeout to 120s for embedded DB startup
+    await client.embedded?.stop();
+  }, 90000); // 90s timeout - allows for Weaviate's 60s startup + binary download/extraction buffer
 
   it('starts/stops EmbeddedDB with latest version', async () => {
-    const client: EmbeddedClient = await weaviate.client(
-      new EmbeddedOptions({
-        version: 'latest',
-      })
-    );
-    await checkClientServerConn(client).catch((err: any) => {
-      client.embedded.stop();
-      throw new Error(`unexpected failure: ${err}`);
+    const latestPort = await getRandomPort();
+    const client: WeaviateClient = await connectToEmbedded({
+      port: latestPort,
+      version: 'latest',
     });
-    client.embedded.stop();
-    // Wait for the process to fully terminate before next test
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-  }, 120000); // Increased timeout to 120s for embedded DB startup
-
-  it('starts/stops EmbeddedDB with binaryUrl', async () => {
-    // Updated to v1.27.0 for v3 client compatibility (gRPC requirement)
-    let binaryUrl = 'https://github.com/weaviate/weaviate/releases/download/v1.27.0/weaviate-v1.27.0-';
-    if (process.platform == 'darwin') {
-      binaryUrl += 'darwin-all.zip';
-    } else {
-      binaryUrl += `linux-amd64.tar.gz`;
-    }
-    const client: EmbeddedClient = await weaviate.client(
-      new EmbeddedOptions({
-        binaryUrl: binaryUrl,
-      })
-    );
     await checkClientServerConn(client).catch((err: any) => {
-      client.embedded.stop();
-      throw new Error(`unexpected failure: ${err}`);
+      client.embedded?.stop();
+      throw new Error(`unexpected error: ${err}`);
     });
-    client.embedded.stop();
-    // Wait for the process to fully terminate
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-  }, 120000); // Increased timeout to 120s for embedded DB startup
+    await client.embedded?.stop();
+  }, 90000); // 90s timeout - allows for Weaviate's 60s startup + GitHub API call + binary download/extraction
 });
 
 // Checks communication between the client and embedded server
 // by creating, then deleting a collection
 /* eslint-disable no-await-in-loop */
-async function checkClientServerConn(client: EmbeddedClient) {
+async function checkClientServerConn(client: WeaviateClient) {
   const testCollection = {
     name: 'TestCollection',
     properties: [{ name: 'stringProp', dataType: 'text' }],
   };
 
-  // Retry logic to handle Raft leader election timing
-  const maxRetries = 10;
-  const retryDelay = 1500; // 1.5 seconds
-  let lastError: any;
-
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const res = await client.collections.create(testCollection);
-      expect(res.name).toEqual('TestCollection');
-      console.log('collection created!');
-      break; // Success, exit retry loop
-    } catch (err: any) {
-      lastError = err;
-      const errorMessage = err.message || String(err);
-
-      // Check if it's a "leader not found" error (Raft not ready)
-      if (errorMessage.includes('leader not found') && attempt < maxRetries) {
-        console.log(`Raft leader not ready, retrying (${attempt}/${maxRetries})...`);
-        await new Promise((resolve) => setTimeout(resolve, retryDelay));
-      } else if (attempt === maxRetries) {
-        throw new Error(`unexpected error after ${maxRetries} retries: ${err}`);
-      } else {
-        // Different error, fail immediately
-        throw new Error(`unexpected error: ${err}`);
-      }
-    }
+  // The new connectToEmbedded() handles health checks and waits for Weaviate to be ready
+  // So we can directly create the collection without retry logic
+  try {
+    const res = await client.collections.create(testCollection);
+    expect(res.name).toEqual('TestCollection');
+  } catch (err: any) {
+    throw new Error(`unexpected error during collection creation: ${err}`);
   }
 
   try {

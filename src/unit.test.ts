@@ -8,7 +8,7 @@ describe('embedded', () => {
     const opt = new EmbeddedOptions();
 
     expect(opt.binaryPath).toEqual(join(homedir(), '.cache/weaviate-embedded-latest'));
-    expect(opt.persistenceDataPath).toEqual(join(homedir(), '.local/share/weaviate'));
+    expect(opt.persistenceDataPath).toEqual(join(homedir(), '.local/share/weaviate_6789'));
     expect(opt.host).toEqual('127.0.0.1');
     expect(opt.port).toEqual(6789);
     expect(opt.env).toHaveProperty('CLUSTER_HOSTNAME', 'Embedded_at_6789');
