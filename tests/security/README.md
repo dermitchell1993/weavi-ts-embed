@@ -1,8 +1,19 @@
-# Archive Bomb Protection Security Tests
+# Security Test Suite
 
-This directory contains security tests that validate protection against archive-based attacks in the binary manager.
+This directory contains comprehensive security tests validating protection against archive-based attacks and malformed file handling in the binary manager.
 
-## 🛡️ Security Threats Covered
+## 📁 Test Files
+
+- **`archiveBombs.test.ts`** - Archive bomb protection (zip bombs, path traversal, symlinks)
+- **`corruptedArchives.test.ts`** - Corrupted/malformed archive handling
+
+---
+
+# 🛡️ Archive Bomb Protection Tests
+
+Tests validating protection against malicious archive-based attacks.
+
+## Security Threats Covered
 
 ### 1. Zip Bombs (Excessive Nesting)
 Archives that contain nested archives many levels deep, designed to consume excessive CPU and memory during extraction.
@@ -54,7 +65,6 @@ archive.zip:
 ### 5. Additional Threats
 - Null bytes in filenames (string truncation exploits)
 - Extremely long paths (filesystem limits)
-- Corrupted archives (parser crashes)
 - Permission errors (graceful handling)
 
 ## 🎯 Security Thresholds
@@ -66,22 +76,14 @@ archive.zip:
 | Max Uncompressed Size | 1GB | Prevents disk exhaustion; reasonable limit for binary archives |
 | Max Path Length | 4096 chars | Standard filesystem limit (Linux PATH_MAX) |
 
-## 📁 Test Files
-
-- **`archiveBombs.test.ts`** - Main security test suite
-- **`../helpers/securityArchives.ts`** - Malicious archive generators
-
 ## 🚀 Running Tests
 
 ```bash
-# Run all security tests
-npm test tests/security/
-
-# Run specific test group
-npm test -- --grep "Excessive Nesting"
+# Run archive bomb tests
+npm test tests/security/archiveBombs.test.ts
 
 # Run with coverage
-npm run test:coverage -- tests/security/
+npm run test:coverage -- tests/security/archiveBombs.test.ts
 ```
 
 ## ⚠️ Implementation Status
@@ -156,6 +158,82 @@ private unzipBinary(zipPath: string): Promise<null> {
 }
 ```
 
+---
+
+# 🔨 Corrupted Archive Handling Tests
+
+Tests verifying proper handling of corrupted, malformed, and incomplete archive files.
+
+## Test Coverage
+
+### 1. Corrupted TAR Archive Detection
+- **Invalid header detection**: Rejects files with corrupted tar headers
+- **Empty archive handling**: Gracefully handles zero-byte tar files
+- **Header-only archives**: Detects tar files with only header bytes
+- **Descriptive error messages**: Provides helpful error information without exposing sensitive paths
+
+### 2. Corrupted ZIP Archive Detection
+- **Invalid header detection**: Rejects files with corrupted zip headers
+- **Empty archive handling**: Gracefully handles zero-byte zip files
+- **Error message quality**: Ensures errors are informative and don't leak system information
+
+### 3. Truncated Archive Detection
+- **Incomplete TAR files**: Detects and rejects truncated tar.gz archives
+- **Incomplete ZIP files**: Detects and rejects truncated zip archives
+- **Download failure simulation**: Tests behavior when archives are incomplete (simulating interrupted downloads)
+
+### 4. Partial Extraction Failure Handling
+- **Mid-process failures**: Handles extraction failures during processing
+- **Cleanup verification**: Ensures no partial files are left after failures
+- **Resource management**: Verifies proper cleanup of temporary files
+
+### 5. Security - Error Message Sanitization
+- **Path exposure prevention**: Ensures error messages don't expose sensitive system paths
+- **User directory protection**: Verifies no user-specific paths leak in errors
+- **System path protection**: Confirms system directories are not exposed
+
+### 6. Cleanup and Resource Management
+- **Disk space leak prevention**: Verifies failed extractions don't accumulate files
+- **Multiple failure resilience**: Tests that repeated failures don't cause resource leaks
+- **Directory validation**: Ensures proper error handling for missing extraction directories
+
+### 7. Performance Testing
+- **Fast failure detection**: Verifies corrupted archives are detected quickly (< 2 seconds)
+- **Immediate zip validation**: Ensures zip corruption is detected immediately
+
+## 🚀 Running Tests
+
+```bash
+# Run corrupted archive tests
+npm test tests/security/corruptedArchives.test.ts
+
+# Run all security tests
+npm test tests/security/
+```
+
+## ✅ Success Criteria
+
+### Archive Bomb Tests
+- ✅ All 5 main attack vectors have test coverage
+- ✅ Boundary conditions tested for all thresholds
+- ✅ Tests execute in < 3 seconds
+- ✅ Mock archive generators created and documented
+- ✅ Security thresholds documented
+- ✅ Clear, actionable error messages specified
+- ✅ No false positives on legitimate archives
+
+### Corrupted Archive Tests
+- ✅ Corrupted tar archive test passes
+- ✅ Corrupted zip archive test passes
+- ✅ Partial extraction failure test passes
+- ✅ Partial files cleaned up on failure
+- ✅ Truncated archive detection test passes
+- ✅ Error messages are descriptive
+- ✅ Tests execute in < 2 seconds
+- ✅ Mock archive helper utilities created
+
+---
+
 ## 📚 References
 
 - [OWASP: Path Traversal](https://owasp.org/www-community/attacks/Path_Traversal)
@@ -166,7 +244,8 @@ private unzipBinary(zipPath: string): Promise<null> {
 
 ## 🔗 Related Issues
 
-- **PRI-829**: Archive Bomb Protection (this implementation)
+- **PRI-829**: Archive Bomb Protection (Agent 4)
+- **PRI-826**: Corrupted Archive Handling (Agent 3)
 - **PRI-824**: Binary Manager Test Enhancements (parent)
 - **PRI-789**: Wave 2: Testing Suite (grandparent)
 
@@ -179,21 +258,13 @@ private unzipBinary(zipPath: string): Promise<null> {
 5. **Performance**: Tests complete in < 3 seconds (acceptance criteria)
 6. **Documentation**: Each test includes comments explaining the attack vector
 
-## 🎯 Success Criteria
-
-- ✅ All 5 main attack vectors have test coverage
-- ✅ Boundary conditions tested for all thresholds
-- ✅ Tests execute in < 3 seconds
-- ✅ Mock archive generators created and documented
-- ✅ Security thresholds documented
-- ✅ Clear, actionable error messages specified
-- ✅ No false positives on legitimate archives
-
 ## 📝 Notes
 
 This security test suite was developed following the Wave-Based development model for the Weaviate TS Embedded v3 Migration project. The tests can run independently and merge to `develop` without blocking other parallel work streams.
 
-**Agent**: PRI-829 (Agent 4 - Archive Bomb Protection)  
 **Wave**: Wave 2 (Testing Suite)  
-**Execution Model**: Parallel (zero conflicts with other agents)
+**Execution Model**: Parallel (zero conflicts with other agents)  
+**Agents**: 
+- Agent 3: PRI-826 (Corrupted Archive Handling)
+- Agent 4: PRI-829 (Archive Bomb Protection)
 

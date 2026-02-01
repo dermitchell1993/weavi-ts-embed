@@ -54,13 +54,20 @@ export class EmbeddedOptions {
       AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true',
       QUERY_DEFAULTS_LIMIT: '20',
       PERSISTENCE_DATA_PATH: this.persistenceDataPath,
+      // CLUSTER_HOSTNAME is required by Weaviate even for single-node instances.
+      // It's set to a port-specific value to ensure deterministic identity across restarts.
+      // Combined with port-specific persistence paths (see getPersistenceDataPath),
+      // this prevents Raft state conflicts when running multiple embedded instances.
       CLUSTER_HOSTNAME: `Embedded_at_${this.port}`,
       DEFAULT_VECTORIZER_MODULE: 'none',
       ENABLE_MODULES:
         'text2vec-openai,text2vec-cohere,text2vec-huggingface,' +
         'ref2vec-centroid,generative-openai,qna-openai',
-      // Disable Raft for embedded single-node mode to avoid bootstrap issues
-      RAFT_ENABLE: 'false', // Disable Raft consensus for embedded mode
+      // Disable Raft consensus for embedded single-node mode.
+      // Raft is designed for multi-node clusters and adds unnecessary startup overhead
+      // (~10-30s bootstrap delays) in embedded scenarios. This significantly improves
+      // startup time and reliability in CI/test environments.
+      RAFT_ENABLE: 'false',
       // Any above defaults can be overridden with export env vars
       ...process.env,
     };
@@ -125,7 +132,11 @@ export class EmbeddedOptions {
     if (!persistenceDataPath) {
       persistenceDataPath = defaultPersistenceDataPath;
     }
-    // Use unique persistence path per port to avoid test conflicts
+    // Use unique persistence path per port to prevent Raft state conflicts.
+    // Each embedded instance gets isolated storage, ensuring that:
+    // 1. Multiple instances can run concurrently without conflicts
+    // 2. Port changes don't trigger Raft "unknown node" errors
+    // 3. Test cleanup is simpler (just delete port-specific directory)
     return `${persistenceDataPath}_${this.port}`;
   }
 }
@@ -220,20 +231,161 @@ export class EmbeddedDB {
     });
   }
 
-  private async ensureWeaviateBinaryExists() {
-    if (!fs.existsSync(`${this.options.binaryPath}`)) {
-      console.log(
-        `Binary ${this.options.binaryPath} does not exist.`,
-        `Downloading binary for version ${this.options.version || this.options.binaryPath}`
-      );
-      await this.downloadBinary().then(async (downloadPath) => {
-        if (downloadPath.endsWith('tgz')) {
-          await this.untarBinary(downloadPath);
-        } else {
-          await this.unzipBinary(downloadPath);
-        }
-      });
+  /**
+   * Checks if a lock file is stale (held by a crashed process)
+   * Returns true if stale lock was detected and removed
+   */
+  private checkAndRemoveStaleLock(lockFile: string): boolean {
+    if (!fs.existsSync(lockFile)) {
+      return false;
     }
+
+    try {
+      const lockContent = fs.readFileSync(lockFile, 'utf-8');
+      const lockPid = parseInt(lockContent, 10);
+
+      if (isNaN(lockPid)) {
+        return false;
+      }
+
+      // Check if the process is still alive (signal 0 = check existence)
+      try {
+        process.kill(lockPid, 0);
+        console.log(`Lock held by active process PID ${lockPid}`);
+        return false;
+      } catch (e: any) {
+        // Process doesn't exist - stale lock detected
+        if (e.code === 'ESRCH') {
+          console.log(`Detected stale lock from PID ${lockPid}, removing...`);
+          fs.unlinkSync(lockFile);
+          return true;
+        }
+        // Other errors (EPERM, etc.) - process may still be alive
+        console.log(`Unable to check process ${lockPid}: ${e.code || e.message}`);
+        return false;
+      }
+    } catch (readErr) {
+      console.log(`Unable to read lock file for stale lock detection: ${readErr}`);
+      return false;
+    }
+  }
+
+  /**
+   * Validates that a binary file is not corrupted or incomplete
+   */
+  private validateBinaryFile(binaryPath: string): void {
+    try {
+      const stats = fs.statSync(binaryPath);
+      if (stats.size === 0) {
+        throw new Error(`Binary downloaded but is empty (0 bytes): ${binaryPath}`);
+      }
+      console.log(`Binary validated: ${stats.size} bytes`);
+    } catch (statErr: any) {
+      throw new Error(`Binary validation failed after download: ${statErr.message || statErr}`);
+    }
+  }
+
+  private async ensureWeaviateBinaryExists(): Promise<void> {
+    // Double-check locking pattern to prevent concurrent downloads
+    if (!fs.existsSync(`${this.options.binaryPath}`)) {
+      const lockFile = `${this.options.binaryPath}.lock`;
+
+      // Try to acquire lock by creating lock file atomically
+      try {
+        // wx flag: open for writing, fail if exists (atomic)
+        fs.writeFileSync(lockFile, process.pid.toString(), { flag: 'wx' });
+
+        try {
+          // Re-check after acquiring lock (another process may have downloaded it)
+          if (!fs.existsSync(`${this.options.binaryPath}`)) {
+            console.log(
+              `Binary ${this.options.binaryPath} does not exist.`,
+              `Downloading binary for version ${this.options.version || this.options.binaryPath}`
+            );
+            await this.downloadBinary().then(async (downloadPath) => {
+              if (downloadPath.endsWith('tgz')) {
+                await this.untarBinary(downloadPath);
+              } else {
+                await this.unzipBinary(downloadPath);
+              }
+            });
+          }
+        } finally {
+          // Always release lock
+          try {
+            fs.unlinkSync(lockFile);
+          } catch (e) {
+            // Ignore errors during lock cleanup
+          }
+        }
+      } catch (err: any) {
+        // Lock acquisition failed - log error details for debugging
+        console.log(`Lock acquisition failed: ${err.code || err.message}`);
+
+        // Check for stale lock file (process crashed while holding lock)
+        const staleLockRemoved = this.checkAndRemoveStaleLock(lockFile);
+        if (staleLockRemoved) {
+          // Recursively retry lock acquisition once after removing stale lock
+          return this.ensureWeaviateBinaryExists();
+        }
+
+        // Lock file exists and process is active - wait for binary to appear
+        // Exponential backoff: start at 200ms, double each iteration, max 2s
+        const maxWait = 45000; // 45 seconds (reduced from 120s to prevent excessive CI timeouts)
+        const startTime = Date.now();
+
+        console.log(`Waiting for another process to complete binary download: ${this.options.binaryPath}`);
+
+        await this.waitForBinaryWithBackoff(lockFile, maxWait, startTime);
+
+        console.log(`Binary ${this.options.binaryPath} downloaded by another process`);
+
+        // Verify the binary is valid (not corrupted or incomplete)
+        this.validateBinaryFile(this.options.binaryPath);
+      }
+    }
+  }
+
+  /**
+   * Wait for binary download with exponential backoff and process liveness checks
+   */
+  private waitForBinaryWithBackoff(lockFile: string, maxWait: number, startTime: number): Promise<void> {
+    const checkAndWait = async (currentInterval: number): Promise<void> => {
+      // Check timeout first
+      if (Date.now() - startTime > maxWait) {
+        throw new Error(
+          `Timeout waiting for binary download by another process: ${this.options.binaryPath} (waited ${maxWait}ms)`
+        );
+      }
+
+      // Check if binary exists
+      if (fs.existsSync(`${this.options.binaryPath}`)) {
+        return;
+      }
+
+      // Check if the downloading process is still alive
+      const lockContent = fs.readFileSync(lockFile, 'utf-8');
+      const lockPid = parseInt(lockContent, 10);
+      if (!isNaN(lockPid)) {
+        try {
+          process.kill(lockPid, 0); // Check if process exists
+        } catch (e: any) {
+          // Process died - remove stale lock and retry
+          if (e.code === 'ESRCH') {
+            console.log(`Downloading process ${lockPid} died, removing stale lock and retrying...`);
+            fs.unlinkSync(lockFile);
+            return this.ensureWeaviateBinaryExists();
+          }
+        }
+      }
+
+      // Wait with exponential backoff and jitter, then recurse
+      const nextInterval = Math.min(currentInterval * 2, 2000);
+      await new Promise((resolve) => setTimeout(resolve, currentInterval + Math.random() * 50));
+      return checkAndWait(nextInterval);
+    };
+
+    return checkAndWait(200); // Start with 200ms
   }
 
   private ensurePathsExist() {
@@ -367,8 +519,12 @@ export class EmbeddedDB {
   private waitTillListening(): Promise<null> {
     return new Promise((resolve, reject) => {
       // Configurable timeout with CI/test-aware defaults
-      // CI: 30s, Production: 120s (configurable via WEAVIATE_STARTUP_TIMEOUT)
-      const defaultTimeout = process.env.CI ? 30000 : 120000;
+      // CI environments need longer timeouts due to:
+      // 1. Resource constraints (CPU/memory contention)
+      // 2. Raft consensus bootstrap delays (even for single-node embedded instances)
+      // 3. Concurrent test suite execution
+      // CI: 60s, Production: 120s (configurable via WEAVIATE_STARTUP_TIMEOUT)
+      const defaultTimeout = process.env.CI ? 60000 : 120000;
       const timeoutMs = parseInt(process.env.WEAVIATE_STARTUP_TIMEOUT || String(defaultTimeout), 10);
       const checkIntervalMs = process.env.CI ? 500 : 1000;
       console.log(`Waiting for Weaviate startup (timeout: ${timeoutMs}ms)...`);
