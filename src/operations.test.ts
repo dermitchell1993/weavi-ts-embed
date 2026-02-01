@@ -1,6 +1,6 @@
 /**
  * Weaviate Operations Test Suite
- * 
+ *
  * Tests runtime operations using a SHARED Weaviate instance.
  * Pattern: One Weaviate startup, 15+ tests, complete in 2-4 minutes.
  */
@@ -10,25 +10,25 @@ import * as net from 'net';
 
 let sharedClient: EmbeddedClient;
 
-const genName = (prefix: string) => 
-  `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+const genName = (prefix: string) => `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
-const getRandomPort = (): Promise<number> => new Promise((resolve, reject) => {
-  const srv = net.createServer();
-  srv.listen(0, () => {
-    const { port } = srv.address() as net.AddressInfo;
-    port ? srv.close(() => resolve(port)) : reject(new Error('No port found'));
+const getRandomPort = (): Promise<number> =>
+  new Promise((resolve, reject) => {
+    const srv = net.createServer();
+    srv.listen(0, () => {
+      const { port } = srv.address() as net.AddressInfo;
+      port ? srv.close(() => resolve(port)) : reject(new Error('No port found'));
+    });
   });
-});
 
 beforeAll(async () => {
   if (process.platform !== 'linux' && process.platform !== 'darwin') return;
   console.log('🚀 Starting shared Weaviate instance...');
   const port = await getRandomPort();
-  sharedClient = await weaviate.client(
-    new EmbeddedOptions({ port }),
-    { host: `127.0.0.1:${port}`, scheme: 'http' }
-  );
+  sharedClient = await weaviate.client(new EmbeddedOptions({ port }), {
+    host: `127.0.0.1:${port}`,
+    scheme: 'http',
+  });
   expect(await sharedClient.isReady()).toBe(true);
   console.log(`✅ Ready on port ${port}`);
 }, 120000);
@@ -36,9 +36,7 @@ beforeAll(async () => {
 afterEach(async () => {
   if (!sharedClient) return;
   const collections = await sharedClient.collections.listAll().catch(() => []);
-  await Promise.all(collections.map(c => 
-    sharedClient.collections.delete(c.name).catch(() => {})
-  ));
+  await Promise.all(collections.map((c) => sharedClient.collections.delete(c.name).catch(() => {})));
 });
 
 afterAll(async () => {
@@ -77,7 +75,7 @@ describe('Weaviate Operations Suite', () => {
       }
       const collections = await sharedClient.collections.listAll();
       expect(collections.length).toBe(3);
-      names.forEach(n => expect(collections.map(c => c.name)).toContain(n));
+      names.forEach((n) => expect(collections.map((c) => c.name)).toContain(n));
     });
 
     it('gets collection details', async () => {
@@ -101,7 +99,7 @@ describe('Weaviate Operations Suite', () => {
       });
       await sharedClient.collections.delete(name);
       const collections = await sharedClient.collections.listAll();
-      expect(collections.find(c => c.name === name)).toBeUndefined();
+      expect(collections.find((c) => c.name === name)).toBeUndefined();
     });
   });
 
@@ -182,12 +180,10 @@ describe('Weaviate Operations Suite', () => {
         { status: 'published' },
         { status: 'published' },
       ]);
-      await coll.data.deleteMany(
-        coll.filter.byProperty('status').equal('draft')
-      );
+      await coll.data.deleteMany(coll.filter.byProperty('status').equal('draft'));
       const remaining = await coll.query.fetchObjects({ limit: 10 });
       expect(remaining.objects.length).toBe(2);
-      expect(remaining.objects.every(o => o.properties.status === 'published')).toBe(true);
+      expect(remaining.objects.every((o) => o.properties.status === 'published')).toBe(true);
     });
   });
 
@@ -197,9 +193,7 @@ describe('Weaviate Operations Suite', () => {
         name: genName('FetchLimit'),
         properties: [{ name: 'index', dataType: 'int' }],
       });
-      await coll.data.insertMany(
-        Array.from({ length: 20 }, (_, i) => ({ index: i }))
-      );
+      await coll.data.insertMany(Array.from({ length: 20 }, (_, i) => ({ index: i })));
       const result = await coll.query.fetchObjects({ limit: 5 });
       expect(result.objects.length).toBe(5);
     });
@@ -222,7 +216,7 @@ describe('Weaviate Operations Suite', () => {
         limit: 10,
       });
       expect(result.objects.length).toBe(2);
-      expect(result.objects.every(o => o.properties.category === 'A')).toBe(true);
+      expect(result.objects.every((o) => o.properties.category === 'A')).toBe(true);
     });
   });
 
@@ -261,9 +255,7 @@ describe('Weaviate Operations Suite', () => {
         name: genName('InvalidData'),
         properties: [{ name: 'count', dataType: 'int' }],
       });
-      await expect(
-        coll.data.insert({ count: 'not a number' })
-      ).rejects.toThrow();
+      await expect(coll.data.insert({ count: 'not a number' })).rejects.toThrow();
     });
   });
 });
