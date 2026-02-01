@@ -75,8 +75,17 @@ beforeAll(async () => {
 
 afterEach(async () => {
   if (!sharedClient) return;
-  const collections = await sharedClient.collections.listAll().catch(() => []);
-  await Promise.all(collections.map((c) => sharedClient.collections.delete(c.name).catch(() => {})));
+  const collections = await sharedClient.collections.listAll().catch((err) => {
+    console.warn('Failed to list collections during cleanup:', err);
+    return [];
+  });
+  await Promise.all(
+    collections.map((c) =>
+      sharedClient.collections.delete(c.name).catch((err) => {
+        console.warn(`Failed to delete collection ${c.name}:`, err);
+      })
+    )
+  );
 });
 
 afterAll(async () => {
@@ -93,7 +102,7 @@ describe('Weaviate Operations Suite', () => {
   }
 
   describe('Collection Management', () => {
-    it('creates collection with schema', async () => {
+    it('creates collection with text properties', async () => {
       const name = genName('BasicSchema');
       const coll = await sharedClient.collections.create({
         name,
@@ -120,7 +129,7 @@ describe('Weaviate Operations Suite', () => {
       names.forEach((n) => expect(collections.map((c) => c.name)).toContain(n));
     });
 
-    it('gets collection details', async () => {
+    it('retrieves collection by name after creation', async () => {
       const name = genName('GetDetails');
       await sharedClient.collections.create({
         name,
@@ -289,7 +298,7 @@ describe('Weaviate Operations Suite', () => {
           name: 'invalid-name-with-dashes',
           properties: [{ name: 'data', dataType: 'text' }],
         })
-      ).rejects.toThrow();
+      ).rejects.toThrow(/invalid.*class.*name|class.*name.*invalid/i);
     });
 
     it('rejects invalid data types', async () => {
@@ -297,7 +306,7 @@ describe('Weaviate Operations Suite', () => {
         name: genName('InvalidData'),
         properties: [{ name: 'count', dataType: 'int' }],
       });
-      await expect(coll.data.insert({ count: 'not a number' })).rejects.toThrow();
+      await expect(coll.data.insert({ count: 'not a number' })).rejects.toThrow(/type|invalid|number/i);
     });
   });
 });
