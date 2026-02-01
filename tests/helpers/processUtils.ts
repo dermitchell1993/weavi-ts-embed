@@ -244,16 +244,71 @@ export function getProcessMemoryUsage(pid?: number): {
  * Useful for tests to avoid port conflicts
  * @returns Promise resolving to an available port number
  */
-export function getRandomPort(): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const server = net.createServer();
-    server.listen(0, () => {
-      const address = server.address() as net.AddressInfo;
-      const { port } = address;
-      server.close(() => resolve(port));
-    });
-    server.on('error', reject);
-  });
+/**
+ * Get a random available port from the OS with retry logic
+ * 
+ * @param maxRetries Maximum number of retry attempts (default: 3)
+ * @returns Promise resolving to an available port number
+ * @throws Error if all retry attempts fail
+ * 
+ * @example
+ * const port = await getRandomPort();
+ * console.log(`Allocated port: ${port}`);
+ */
+export async function getRandomPort(maxRetries = 3): Promise<number> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await new Promise<number>((resolve, reject) => {
+        const server = net.createServer();
+        server.listen(0, () => {
+          const address = server.address() as net.AddressInfo;
+          const { port } = address;
+          server.close(() => resolve(port));
+        });
+        server.on('error', reject);
+      });
+    } catch (err) {
+      if (i === maxRetries - 1) throw err;
+      // Wait 100ms before retrying to avoid race conditions
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  }
+  throw new Error('Failed to allocate port after retries');
+}
+
+/**
+ * Weaviate internal port configuration for parallel test execution
+ * 
+ * Allocates unique ports for Weaviate's internal services to prevent conflicts
+ * when running multiple instances in parallel:
+ * - Main port: Weaviate HTTP API
+ * - GRPC port: gRPC server (default 50051)
+ * - Profiling port: pprof debug server (default 6060)
+ * 
+ * @returns Promise resolving to port configuration object
+ * 
+ * @example
+ * const ports = await getWeaviateInternalPorts();
+ * const client = await connectToEmbedded({
+ *   port: ports.main,
+ *   grpcPort: ports.grpc,
+ *   env: {
+ *     GO_PROFILING_PORT: String(ports.profiling),
+ *   },
+ * });
+ */
+export async function getWeaviateInternalPorts(): Promise<{
+  main: number;
+  grpc: number;
+  profiling: number;
+}> {
+  const [main, grpc, profiling] = await Promise.all([
+    getRandomPort(),
+    getRandomPort(),
+    getRandomPort(),
+  ]);
+  
+  return { main, grpc, profiling };
 }
 
 /**

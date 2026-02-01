@@ -4,6 +4,13 @@
  * Test Suite: W2.4 - Environment Variable Tests
  * Target: 100% pass rate
  *
+ * ⚡ **Parallel-Safe**: This test file uses dynamic port allocation via getRandomPort()
+ * and getWeaviateInternalPorts() to prevent port conflicts when running tests concurrently.
+ * Each test instance receives unique ports for:
+ * - Main HTTP API port
+ * - gRPC server port (GRPC_PORT)
+ * - Go profiling/pprof port (GO_PROFILING_PORT)
+ *
  * This test suite validates environment variable configuration handling
  * in the embedded Weaviate TypeScript client, ensuring proper:
  * - Port configuration (WEAVIATE_PORT, custom ports)
@@ -28,7 +35,7 @@ import { connectToEmbedded, EmbeddedClient, EmbeddedOptions } from '../../src/in
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { mkdirSync, rmSync, existsSync } from 'fs';
-import { getRandomPort } from '../helpers/processUtils';
+import { getWeaviateInternalPorts } from '../helpers/processUtils';
 
 /**
  * Helper function to create a unique test data directory
@@ -222,14 +229,16 @@ describe('Environment Variable Configuration Tests', () => {
     }, 10000); // Config-only test
 
     it('should start embedded instance with custom env vars and verify connectivity', async () => {
-      const testPort = await getRandomPort();
+      const ports = await getWeaviateInternalPorts();
       const customEnv = {
         QUERY_DEFAULTS_LIMIT: '75',
         PERSISTENCE_DATA_PATH: testDataDir,
+        GO_PROFILING_PORT: String(ports.profiling),
       };
 
       client = await connectToEmbedded({
-        port: testPort,
+        port: ports.main,
+        grpcPort: ports.grpc,
         env: customEnv,
       });
 
@@ -238,12 +247,13 @@ describe('Environment Variable Configuration Tests', () => {
     }, 10000); // Config-only test
 
     it('should handle custom CLUSTER_HOSTNAME environment variable', async () => {
-      const testPort = await getRandomPort();
+      const ports = await getWeaviateInternalPorts();
       const customHostname = 'test-embedded-cluster';
       const options = new EmbeddedOptions({
-        port: testPort,
+        port: ports.main,
         env: {
           CLUSTER_HOSTNAME: customHostname,
+          GO_PROFILING_PORT: String(ports.profiling),
         },
       });
 
@@ -284,13 +294,15 @@ describe('Environment Variable Configuration Tests', () => {
     }, 10000); // Config-only test
 
     it('should create persistence directory if it does not exist', async () => {
-      const testPort = await getRandomPort();
+      const ports = await getWeaviateInternalPorts();
       const customPath = join(testDataDir, 'auto-created-persistence');
 
       client = await connectToEmbedded({
-        port: testPort,
+        port: ports.main,
+        grpcPort: ports.grpc,
         env: {
           PERSISTENCE_DATA_PATH: customPath,
+          GO_PROFILING_PORT: String(ports.profiling),
         },
       });
 
@@ -335,14 +347,16 @@ describe('Environment Variable Configuration Tests', () => {
     }, 10000); // Config-only test
 
     it('should start embedded instance with custom persistence path', async () => {
-      const testPort = await getRandomPort();
+      const ports = await getWeaviateInternalPorts();
       const customPersistencePath = join(testDataDir, 'test-persistence');
       mkdirSync(customPersistencePath, { recursive: true });
 
       client = await connectToEmbedded({
-        port: testPort,
+        port: ports.main,
+        grpcPort: ports.grpc,
         env: {
           PERSISTENCE_DATA_PATH: customPersistencePath,
+          GO_PROFILING_PORT: String(ports.profiling),
         },
       });
 

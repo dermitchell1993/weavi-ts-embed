@@ -1,6 +1,12 @@
 /**
  * Multiple Instance Tests (Wave 2.5)
  *
+ * ⚡ **Parallel-Safe**: This test file uses dynamic port allocation via getWeaviateInternalPorts()
+ * to prevent port conflicts when running tests concurrently. Each test instance receives unique ports for:
+ * - Main HTTP API port
+ * - gRPC server port (GRPC_PORT)
+ * - Go profiling/pprof port (GO_PROFILING_PORT)
+ *
  * Tests for running 2+ Weaviate embedded instances simultaneously.
  * Verifies:
  * 1. Multiple instances can run concurrently
@@ -21,7 +27,7 @@
 
 import { describe, it, expect, afterEach } from 'vitest';
 import { connectToEmbedded, EmbeddedClient } from '../../src/index';
-import { getRandomPort } from '../helpers/processUtils';
+import { getWeaviateInternalPorts } from '../helpers/processUtils';
 
 /**
  * Helper to verify a process is actually running by PID

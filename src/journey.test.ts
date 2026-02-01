@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { connectToEmbedded } from '.';
 import type { WeaviateClient } from 'weaviate-client';
-import { getRandomPort } from '../tests/helpers/processUtils';
+import { getWeaviateInternalPorts } from '../tests/helpers/processUtils';
 
 describe('embedded', () => {
   it('checks platform', () => {});
@@ -21,13 +21,15 @@ describe('embedded', () => {
   }, 90000); // 90s timeout - allows for Weaviate's 60s startup + binary download/extraction buffer
 
   it('starts/stops EmbeddedDB with custom options', async () => {
-    const testPort = await getRandomPort();
+    const ports = await getWeaviateInternalPorts();
     const client: WeaviateClient = await connectToEmbedded({
-      port: testPort,
+      port: ports.main,
+      grpcPort: ports.grpc,
       version: '1.27.0', // Updated to v1.27.0 for v3 client compatibility (gRPC requirement)
       env: {
         QUERY_DEFAULTS_LIMIT: 50,
         DEFAULT_VECTORIZER_MODULE: 'text2vec-openai',
+        GO_PROFILING_PORT: String(ports.profiling),
       },
     });
     await checkClientServerConn(client).catch((err: any) => {
@@ -40,10 +42,14 @@ describe('embedded', () => {
   }, 90000); // 90s timeout - allows for Weaviate's 60s startup + binary download/extraction buffer
 
   it('starts/stops EmbeddedDB with latest version', async () => {
-    const testPort = await getRandomPort();
+    const ports = await getWeaviateInternalPorts();
     const client: WeaviateClient = await connectToEmbedded({
-      port: testPort,
+      port: ports.main,
+      grpcPort: ports.grpc,
       version: 'latest',
+      env: {
+        GO_PROFILING_PORT: String(ports.profiling),
+      },
     });
     await checkClientServerConn(client).catch((err: any) => {
       client.embedded?.stop();
