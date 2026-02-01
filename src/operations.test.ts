@@ -25,6 +25,42 @@ const getRandomPort = (): Promise<number> =>
     });
   });
 
+// Verify connection with Raft leader election retry logic (based on journey.test.ts pattern)
+async function verifyConnection(client: EmbeddedClient): Promise<void> {
+  const maxRetries = 10;
+  const retryDelay = 1500; // 1.5 seconds
+  let lastError: Error | undefined;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      // Create and delete a test collection to verify full connectivity
+      const testCollection = await client.collections.create({
+        name: `ConnectionTest_${Date.now()}`,
+        properties: [{ name: 'test', dataType: 'text' }],
+      });
+      await client.collections.delete(testCollection.name);
+      console.log('✅ Connection verified');
+      return; // Success
+    } catch (err: any) {
+      lastError = err;
+      const errorMessage = err.message || String(err);
+
+      // Check if it's a Raft leader election timing issue
+      if (errorMessage.includes('leader not found') && attempt < maxRetries) {
+        console.log(`⏳ Raft leader not ready, retrying (${attempt}/${maxRetries})...`);
+        await new Promise((resolve) => setTimeout(resolve, retryDelay));
+      } else if (attempt === maxRetries) {
+        throw new Error(`Connection verification failed after ${maxRetries} retries: ${errorMessage}`);
+      } else {
+        // Different error, fail immediately
+        throw new Error(`Connection verification failed: ${errorMessage}`);
+      }
+    }
+  }
+
+  throw lastError || new Error('Connection verification failed');
+}
+
 beforeAll(async () => {
   if (process.platform !== 'linux' && process.platform !== 'darwin') return;
   console.log('🚀 Starting shared Weaviate instance...');
@@ -33,7 +69,7 @@ beforeAll(async () => {
     host: `127.0.0.1:${port}`,
     scheme: 'http',
   });
-  expect(await sharedClient.isReady()).toBe(true);
+  await verifyConnection(sharedClient);
   console.log(`✅ Ready on port ${port}`);
 }, 120000);
 
