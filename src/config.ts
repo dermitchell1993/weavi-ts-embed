@@ -17,12 +17,13 @@
  */
 
 import { EmbeddedOptionsConfig } from './embedded';
+import { Logger, defaultLogger } from './types';
 
 /**
  * Default configuration values for embedded Weaviate instance.
  * These defaults are applied when user doesn't provide specific values.
  */
-export const DEFAULT_CONFIG: Required<Omit<EmbeddedOptionsConfig, 'version' | 'binaryUrl'>> & {
+export const DEFAULT_CONFIG: Required<Omit<EmbeddedOptionsConfig, 'version' | 'binaryUrl' | 'logger'>> & {
   version: string;
   binaryUrl: string | undefined;
 } = {
@@ -126,8 +127,11 @@ function validatePort(port: number): void {
 
 /**
  * Validates version field
+ *
+ * @param version - The version string to validate
+ * @param logger - Optional logger for warnings (defaults to console)
  */
-function validateVersion(version: string): void {
+function validateVersion(version: string, logger: Logger = defaultLogger): void {
   if (typeof version !== 'string') {
     throw new ConfigValidationError('Version must be a string', 'version');
   }
@@ -181,7 +185,7 @@ function validateVersion(version: string): void {
 
   // Warn about pre-1.0 versions (development/unstable)
   if (majorVersion === '0') {
-    console.warn(
+    logger.warn(
       `⚠️  Version ${version} has major version 0.x.x - this indicates initial development phase. ` +
         'Per semver spec, the public API should not be considered stable.'
     );
@@ -189,7 +193,7 @@ function validateVersion(version: string): void {
 
   // Warn about build metadata without pre-release (unusual pattern)
   if (hasBuildMetadata && !hasPreRelease) {
-    console.warn(
+    logger.warn(
       `ℹ️  Version ${version} includes build metadata without pre-release tag. ` +
         'This is valid but uncommon - build metadata is typically used with pre-releases.'
     );
@@ -249,6 +253,7 @@ function validateEnv(env: object): void {
  * - Host format validation
  *
  * @param config - Configuration object to validate
+ * @param logger - Optional logger for warnings (defaults to console or config.logger)
  * @returns The same configuration object if validation passes
  * @throws {ConfigValidationError} If validation fails with detailed error message
  *
@@ -265,7 +270,10 @@ function validateEnv(env: object): void {
  * }
  * ```
  */
-export function validateOptions(config: EmbeddedOptionsConfig): EmbeddedOptionsConfig {
+export function validateOptions(
+  config: EmbeddedOptionsConfig,
+  logger: Logger = config.logger || defaultLogger
+): EmbeddedOptionsConfig {
   // Validate mutual exclusivity of version and binaryUrl
   if (config.version !== undefined && config.binaryUrl !== undefined) {
     throw new ConfigValidationError(
@@ -284,7 +292,7 @@ export function validateOptions(config: EmbeddedOptionsConfig): EmbeddedOptionsC
   }
 
   if (config.version !== undefined) {
-    validateVersion(config.version);
+    validateVersion(config.version, logger);
   }
 
   if (config.binaryUrl !== undefined) {
@@ -425,6 +433,9 @@ export function prepareConfig(
   userConfig?: EmbeddedOptionsConfig,
   baseConfig?: EmbeddedOptionsConfig
 ): EmbeddedOptionsConfig {
+  // Extract logger from userConfig or baseConfig (userConfig takes precedence)
+  const logger = userConfig?.logger || baseConfig?.logger || defaultLogger;
+
   // Start with defaults
   let config = applyDefaults();
 
@@ -443,6 +454,6 @@ export function prepareConfig(
     config.version = undefined;
   }
 
-  // Validate the final configuration
-  return validateOptions(config);
+  // Validate the final configuration with the extracted logger
+  return validateOptions(config, logger);
 }
