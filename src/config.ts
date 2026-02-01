@@ -23,7 +23,7 @@ import { Logger, defaultLogger } from './types';
  * Default configuration values for embedded Weaviate instance.
  * These defaults are applied when user doesn't provide specific values.
  */
-export const DEFAULT_CONFIG: Required<Omit<EmbeddedOptionsConfig, 'version' | 'binaryUrl'>> & {
+export const DEFAULT_CONFIG: Required<Omit<EmbeddedOptionsConfig, 'version' | 'binaryUrl' | 'logger'>> & {
   version: string;
   binaryUrl: string | undefined;
 } = {
