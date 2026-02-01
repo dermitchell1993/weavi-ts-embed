@@ -5,16 +5,16 @@ import { getRandomPort } from '../tests/helpers/processUtils';
 
 /**
  * EmbeddedDB Configuration Tests
- * 
+ *
  * IMPORTANT: These tests validate different startup CONFIGURATIONS and cannot
  * use the shared instance pattern. Each test verifies:
  * - Different versions ('latest' vs specific)
  * - Different download methods (version vs binaryUrl)
  * - Different configurations (ports, env vars)
- * 
+ *
  * Shared instances only work for OPERATION tests (testing runtime behavior),
  * not CONFIGURATION tests (testing startup variations).
- * 
+ *
  * See docs/test-architecture-analysis.md for detailed analysis.
  */
 describe('embedded', () => {
