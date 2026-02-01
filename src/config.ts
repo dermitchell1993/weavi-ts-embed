@@ -138,6 +138,27 @@ function validateVersion(version: string): void {
       'version'
     );
   }
+
+  // Warn about unusual-but-valid version patterns
+  const majorVersion = version.split('.')[0];
+  const hasPreRelease = version.includes('-');
+  const hasBuildMetadata = version.includes('+');
+
+  // Warn about pre-1.0 versions (development/unstable)
+  if (majorVersion === '0') {
+    console.warn(
+      `⚠️  Version ${version} has major version 0.x.x - this indicates initial development phase. ` +
+        'Per semver spec, the public API should not be considered stable.'
+    );
+  }
+
+  // Warn about build metadata without pre-release (unusual pattern)
+  if (hasBuildMetadata && !hasPreRelease) {
+    console.warn(
+      `ℹ️  Version ${version} includes build metadata without pre-release tag. ` +
+        'This is valid but uncommon - build metadata is typically used with pre-releases.'
+    );
+  }
 }
 
 /**

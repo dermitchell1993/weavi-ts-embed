@@ -8,7 +8,7 @@
  * - prepareConfig(): complete validation pipeline
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   validateOptions,
   applyDefaults,
@@ -362,6 +362,53 @@ describe('Configuration Validator', () => {
         // Note: Regex cannot enforce semantic ordering - '1.0.0+build-rc.1' passes regex
         // but violates semver semantics (build should not contain pre-release marker)
         // This is a known limitation of regex-based validation
+      });
+    });
+
+    describe('version validation - warnings for unusual patterns', () => {
+      it('warns about 0.x.x versions (development phase)', () => {
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+        validateOptions({ version: '0.1.0' });
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('0.1.0 has major version 0.x.x'));
+
+        validateOptions({ version: '0.23.7-rc.1' });
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('0.23.7-rc.1 has major version 0.x.x'));
+
+        warnSpy.mockRestore();
+      });
+
+      it('warns about build metadata without pre-release', () => {
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+        validateOptions({ version: '1.0.0+build.123' });
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringContaining('includes build metadata without pre-release tag')
+        );
+
+        warnSpy.mockRestore();
+      });
+
+      it('does not warn for standard stable versions', () => {
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+        validateOptions({ version: '1.0.0' });
+        validateOptions({ version: '2.3.4' });
+        expect(warnSpy).not.toHaveBeenCalled();
+
+        warnSpy.mockRestore();
+      });
+
+      it('does not warn for pre-release with build metadata', () => {
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+        validateOptions({ version: '1.0.0-rc.1+build.123' });
+        // Should only warn once for any 0.x.x check, not for build metadata
+        expect(warnSpy).not.toHaveBeenCalledWith(
+          expect.stringContaining('includes build metadata without pre-release tag')
+        );
+
+        warnSpy.mockRestore();
       });
     });
 
