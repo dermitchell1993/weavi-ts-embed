@@ -67,6 +67,7 @@ jobs:
 
   integration-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 4  # Buffer for runner overhead + 3min suite timeout
     needs: unit-tests
     if: >
       github.event_name == 'push' ||
