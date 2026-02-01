@@ -71,7 +71,7 @@ describe('validateOptions - Basic Validation', () => {
           version: '1.23.7',
           binaryUrl: 'https://example.com/weaviate',
         },
-        'Cannot provide both version and binaryUrl'
+        "The 'version' and 'binaryUrl' fields are mutually exclusive"
       );
     });
 
@@ -103,15 +103,15 @@ describe('validateOptions - Basic Validation', () => {
 
     describe('invalid hosts', () => {
       it('rejects non-string host', () => {
-        testInvalidHosts(invalidHosts.type, 'Host must be a string');
+        testInvalidHosts(invalidHosts.type, "The 'host' field must be a string");
       });
 
       it('rejects empty host', () => {
-        testInvalidHosts(invalidHosts.empty, 'Host cannot be empty');
+        testInvalidHosts(invalidHosts.empty, "The 'host' field cannot be empty");
       });
 
       it('rejects invalid host format', () => {
-        testInvalidHosts(invalidHosts.format, 'Host must be a valid');
+        testInvalidHosts(invalidHosts.format, "The 'host' field must be a valid");
       });
 
       it('rejects invalid IPv4', () => {
@@ -129,15 +129,15 @@ describe('validateOptions - Basic Validation', () => {
 
     describe('invalid ports', () => {
       it('rejects non-number port', () => {
-        testInvalidPorts(invalidPorts.type, 'Port must be a number');
+        testInvalidPorts(invalidPorts.type, "The 'port' field must be a number");
       });
 
       it('rejects non-integer port', () => {
-        testInvalidPorts(invalidPorts.nonInteger, 'Port must be an integer');
+        testInvalidPorts(invalidPorts.nonInteger, "The 'port' field must be an integer");
       });
 
       it('rejects out of range ports', () => {
-        testInvalidPorts(invalidPorts.outOfRange, 'Port must be between 1 and 65535');
+        testInvalidPorts(invalidPorts.outOfRange, "The 'port' field must be between 1 and 65535");
       });
     });
   });

@@ -36,20 +36,20 @@ describe('validateOptions - Field-Specific Validation', () => {
     it('rejects non-string binaryUrl', () => {
       expectInvalidConfig(
         { binaryUrl: 12345 } as unknown as EmbeddedOptionsConfig,
-        'BinaryUrl must be a string'
+        "The 'binaryUrl' field must be a string"
       );
     });
 
     it('rejects empty binaryUrl', () => {
-      expectInvalidConfig({ binaryUrl: '' }, 'BinaryUrl cannot be empty');
+      expectInvalidConfig({ binaryUrl: '' }, "The 'binaryUrl' field cannot be empty");
     });
 
     it('rejects invalid URL format', () => {
-      expectInvalidConfig({ binaryUrl: 'not-a-valid-url' }, 'BinaryUrl must be a valid URL');
+      expectInvalidConfig({ binaryUrl: 'not-a-valid-url' }, "The 'binaryUrl' field must be a valid URL");
     });
 
     it('rejects URLs without protocol', () => {
-      expectInvalidConfig({ binaryUrl: 'example.com/weaviate' }, 'BinaryUrl must be a valid URL');
+      expectInvalidConfig({ binaryUrl: 'example.com/weaviate' }, "The 'binaryUrl' field must be a valid URL");
     });
   });
 
@@ -100,16 +100,22 @@ describe('validateOptions - Field-Specific Validation', () => {
     it('rejects non-object env', () => {
       expectInvalidConfig(
         { env: 'not-an-object' } as unknown as EmbeddedOptionsConfig,
-        'Env must be an object'
+        "The 'env' field must be an object"
       );
     });
 
     it('rejects null env', () => {
-      expectInvalidConfig({ env: null } as unknown as EmbeddedOptionsConfig, 'Env must be an object');
+      expectInvalidConfig(
+        { env: null } as unknown as EmbeddedOptionsConfig,
+        "The 'env' field must be an object"
+      );
     });
 
     it('rejects array env', () => {
-      expectInvalidConfig({ env: [] } as unknown as EmbeddedOptionsConfig, 'Env must be an object');
+      expectInvalidConfig(
+        { env: [] } as unknown as EmbeddedOptionsConfig,
+        "The 'env' field must be an object"
+      );
     });
 
     it('accepts env with complex key names', () => {
