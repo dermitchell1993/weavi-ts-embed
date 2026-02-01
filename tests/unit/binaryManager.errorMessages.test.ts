@@ -16,12 +16,27 @@
  * - Regex patterns validate message structure, not just keyword presence
  *
  * Performance Target: All tests should complete in <500ms
+ *
+ * Note on Test Duplication:
+ * Some test patterns overlap with src/binary-manager.test.ts (constructor validation,
+ * platform detection). This is INTENTIONAL redundancy for:
+ * - Different testing focus: Error message quality vs. behavior validation
+ * - Wave-based parallel development: Avoiding merge conflicts during Wave 2
+ * - Regression protection: Ensures error messages remain helpful over time
+ *
+ * Note on Error Message Evolution:
+ * These tests lock in specific error message patterns to prevent accidental degradation.
+ * When intentionally improving error messages:
+ * - Update these tests (don't bypass them)
+ * - Ensure new messages remain actionable and contextual
+ * - Verify regex patterns still validate key information elements
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import * as fs from 'fs';
 import * as https from 'https';
 import * as http from 'http';
+import type { IncomingMessage } from 'http';
 import { BinaryManager } from '../../src/binary-manager';
 import { detectPlatform } from '../../src/platform';
 
@@ -214,7 +229,7 @@ describe('BinaryManager - Error Message Assertions', () => {
           }
           return mockResponse;
         }),
-      };
+      } as Partial<IncomingMessage>;
 
       mockHttps.get = vi.fn((url, options, callback: any) => {
         callback(mockResponse);
@@ -244,7 +259,7 @@ describe('BinaryManager - Error Message Assertions', () => {
           }
           return mockResponse;
         }),
-      };
+      } as Partial<IncomingMessage>;
 
       mockHttps.get = vi.fn((url, options, callback: any) => {
         callback(mockResponse);
@@ -272,7 +287,7 @@ describe('BinaryManager - Error Message Assertions', () => {
           }
           return mockResponse;
         }),
-      };
+      } as Partial<IncomingMessage>;
 
       mockHttps.get = vi.fn((url, options, callback: any) => {
         callback(mockResponse);
@@ -446,7 +461,24 @@ describe('BinaryManager - Error Message Assertions', () => {
     });
   });
 
-  // Archive extraction tests temporarily skipped due to complex mocking requirements
+  /**
+   * SKIPPED: Archive Extraction Error Tests
+   *
+   * Rationale for deferring:
+   * - Complex mocking of tar/adm-zip stream APIs requires significant setup
+   * - These error paths are already covered in integration tests
+   * - Async stream handling adds test complexity without proportional value
+   *
+   * Future considerations:
+   * - Can be revisited if specific regression concerns arise
+   * - See PRI-832 (Agent 7) for comprehensive extraction testing:
+   *   https://linear.app/prince-josh/issue/PRI-832/agent-7-filesystem-extraction-and-performance-tests-critical-path
+   *
+   * What's deferred:
+   * - Tar extraction failure error messages
+   * - Zip extraction failure error messages
+   * - Custom binaryUrl tar validation messages
+   */
   describe.skip('Archive Extraction Errors', () => {
     /**
      * Tests that tar extraction failures indicate the error type
@@ -510,7 +542,23 @@ describe('BinaryManager - Error Message Assertions', () => {
     });
   });
 
-  // Checksum tests temporarily skipped due to complex mocking requirements
+  /**
+   * SKIPPED: Checksum Validation Error Tests
+   *
+   * Rationale for deferring:
+   * - Complex stream mocking for file hashing operations
+   * - Checksum validation is primarily behavioral (not message-focused)
+   * - File system operations add test fragility
+   *
+   * Future considerations:
+   * - Can be added if checksum error messages become more complex
+   * - See PRI-832 (Agent 7) for performance testing including checksums:
+   *   https://linear.app/prince-josh/issue/PRI-832/agent-7-filesystem-extraction-and-performance-tests-critical-path
+   *
+   * What's deferred:
+   * - Checksum verification failure messages
+   * - Checksum calculation error messages
+   */
   describe.skip('Checksum Validation Errors', () => {
     /**
      * Tests that checksum verification failures are clear and actionable
