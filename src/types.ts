@@ -195,11 +195,12 @@ export interface HealthCheckConfig {
  *   info: () => {}
  * };
  *
- * // Custom logging integration
+ * // Custom logging integration with debug support
  * const customLogger: Logger = {
  *   warn: (msg) => myLogSystem.warning(msg),
  *   error: (msg) => myLogSystem.error(msg),
- *   info: (msg) => myLogSystem.info(msg)
+ *   info: (msg) => myLogSystem.info(msg),
+ *   debug: (msg) => myLogSystem.debug(msg)
  * };
  * ```
  */
@@ -221,6 +222,13 @@ export interface Logger {
    * Used for general informational messages.
    */
   info(message: string): void;
+
+  /**
+   * Log a debug message (optional).
+   * Used for detailed diagnostic information.
+   * This method is optional to maintain backward compatibility.
+   */
+  debug?(message: string): void;
 }
 
 /**
@@ -231,4 +239,5 @@ export const defaultLogger: Logger = {
   warn: (message: string) => console.warn(message),
   error: (message: string) => console.error(message),
   info: (message: string) => console.info(message),
+  debug: (message: string) => console.debug(message),
 };

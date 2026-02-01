@@ -163,7 +163,11 @@ describe('Logger Integration', () => {
 
       try {
         validateOptions({ version: '0.1.0' });
-        expect(consoleSpy).toHaveBeenCalled();
+        expect(consoleSpy).toHaveBeenCalledTimes(1);
+        expect(consoleSpy).toHaveBeenCalledWith(
+          '⚠️  Version 0.1.0 has major version 0.x.x - this indicates initial development phase. ' +
+            'Per semver spec, the public API should not be considered stable.'
+        );
       } finally {
         consoleSpy.mockRestore();
       }
@@ -174,7 +178,11 @@ describe('Logger Integration', () => {
 
       try {
         validateOptions({ version: '1.0.0+build.123' });
-        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('build metadata'));
+        expect(consoleSpy).toHaveBeenCalledTimes(1);
+        expect(consoleSpy).toHaveBeenCalledWith(
+          'ℹ️  Version 1.0.0+build.123 includes build metadata without pre-release tag. ' +
+            'This is valid but uncommon - build metadata is typically used with pre-releases.'
+        );
       } finally {
         consoleSpy.mockRestore();
       }
@@ -258,6 +266,33 @@ describe('Logger Integration', () => {
 
       expect(() => {
         validateOptions(config);
+      }).not.toThrow();
+    });
+
+    it('accepts logger without debug method (backward compatibility)', () => {
+      // Logger without optional debug() method should work
+      const loggerWithoutDebug: Logger = {
+        warn: vi.fn(),
+        error: vi.fn(),
+        info: vi.fn(),
+      };
+
+      expect(() => {
+        validateOptions({ version: '1.23.7' }, loggerWithoutDebug);
+      }).not.toThrow();
+    });
+
+    it('accepts logger with debug method', () => {
+      // Logger with optional debug() method should also work
+      const loggerWithDebug: Logger = {
+        warn: vi.fn(),
+        error: vi.fn(),
+        info: vi.fn(),
+        debug: vi.fn(),
+      };
+
+      expect(() => {
+        validateOptions({ version: '1.23.7' }, loggerWithDebug);
       }).not.toThrow();
     });
   });
