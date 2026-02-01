@@ -4,7 +4,9 @@ An embedded Weaviate database with TypeScript client interface, available for Li
 
 ## Documentation
 
-- [Documentation](https://weaviate.io/developers/weaviate/installation/embedded).
+- [Official Documentation](https://weaviate.io/developers/weaviate/installation/embedded)
+- [Test Performance Analysis](docs/test-performance.md) - Performance benchmarks and optimization insights
+- [Contributing Guide](CONTRIBUTING.md)
 
 ## Examples
 
