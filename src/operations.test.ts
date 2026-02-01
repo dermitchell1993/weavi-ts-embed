@@ -31,6 +31,7 @@ async function verifyConnection(client: EmbeddedClient): Promise<void> {
   const retryDelay = 1500; // 1.5 seconds
   let lastError: Error | undefined;
 
+  // eslint-disable-next-line no-await-in-loop -- Sequential retries are intentional for connection verification
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       // Create and delete a test collection to verify full connectivity
