@@ -17,7 +17,11 @@ const getRandomPort = (): Promise<number> =>
     const srv = net.createServer();
     srv.listen(0, () => {
       const { port } = srv.address() as net.AddressInfo;
-      port ? srv.close(() => resolve(port)) : reject(new Error('No port found'));
+      if (port) {
+        srv.close(() => resolve(port));
+      } else {
+        reject(new Error('No port found'));
+      }
     });
   });
 
@@ -67,12 +71,14 @@ describe('Weaviate Operations Suite', () => {
 
     it('lists all collections', async () => {
       const names = ['List1', 'List2', 'List3'].map(genName);
-      for (const name of names) {
-        await sharedClient.collections.create({
-          name,
-          properties: [{ name: 'data', dataType: 'text' }],
-        });
-      }
+      await Promise.all(
+        names.map((name) =>
+          sharedClient.collections.create({
+            name,
+            properties: [{ name: 'data', dataType: 'text' }],
+          })
+        )
+      );
       const collections = await sharedClient.collections.listAll();
       expect(collections.length).toBe(3);
       names.forEach((n) => expect(collections.map((c) => c.name)).toContain(n));
