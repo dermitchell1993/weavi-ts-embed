@@ -175,8 +175,48 @@ describe('integration tests', () => {
 
 ## Performance Considerations
 
+### CI Impact Assessment
+
+**Current State** (estimated):
+- Unit tests: ~45-60 seconds total
+- No integration tests in CI currently
+
+**Post-Migration CI Impact**:
+- **Total CI time increase**: +8-12 minutes per run
+- **Integration test suite**: ~6-8 minutes (2 files × ~3-4 minutes each)
+- **Platform matrix**: Linux + macOS = ~12-16 minutes total integration time
+
+**Breakdown by Test File**:
+- `connectToEmbedded.test.ts` (~12 tests): 6-8 minutes
+  - 8 connection tests × 45s average = ~6 minutes
+  - 2 error handling tests × 30s = ~1 minute
+  - 1 concurrent test × 120s = ~2 minutes
+- `journey.test.ts` (~4 tests): 2-3 minutes
+  - 4 configuration tests × 45s = ~3 minutes
+
+**Optimization Strategies**:
+- **Binary caching**: First run downloads (~2 minutes), subsequent runs reuse (~30s)
+- **Parallel execution**: Tests can run concurrently with different ports
+- **Platform-specific**: macOS tests only run on macOS runners, Linux on Linux runners
+- **Selective running**: Integration tests can be run separately from unit tests
+
+**Resource Requirements**:
+- **CPU**: Moderate (binary extraction, Weaviate startup)
+- **Memory**: High (embedded Weaviate instances ~200-500MB each)
+- **Disk**: Moderate (binary downloads ~50-100MB, temp files)
+- **Network**: High (initial binary downloads, health checks)
+
+**CI Strategy Recommendations**:
+1. **Separate workflows**: Unit tests vs integration tests
+2. **Conditional running**: Integration tests only on main branch or manual trigger
+3. **Resource optimization**: Use larger runners for integration tests
+4. **Caching**: Cache downloaded binaries between runs
+5. **Parallel matrix**: Run Linux and macOS integration tests in parallel
+
+### Execution Characteristics
+
 - **Parallel execution**: Tests can run in parallel but need different ports
 - **Resource usage**: Each test consumes CPU, memory, and disk space
-- **CI impact**: Integration tests significantly increase CI time
+- **Timeout management**: Extended timeouts (90-120s) for binary operations
 - **Binary caching**: Subsequent runs may be faster due to cached binaries
-
+- **Platform isolation**: Linux/macOS tests run on appropriate platforms only

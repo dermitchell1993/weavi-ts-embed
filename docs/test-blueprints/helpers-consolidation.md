@@ -103,14 +103,70 @@ export * from './timeout-guard';
 ### Import Simplification
 **Before** (scattered imports):
 ```typescript
+// Binary manager tests
 import { createCorruptedTarArchive } from '../../../test/helpers/mockArchives';
+import { mockHttpsGet } from '../../../test/helpers/networkUtils';
+
+// Operations tests
 import { getRandomPort } from '../../../test/helpers/processUtils';
-import { validVersions } from '../../../src/__tests__/config-test-helpers';
+import { genName } from '../../../src/__tests__/config-test-helpers';
+
+// Integration tests
+import { withTimeout } from '../../../test/utils/timeoutGuard';
+import { setupSuiteTimeout } from '../../../test/setup/suiteTimeout';
 ```
 
-**After** (barrel exports):
+**After** (barrel exports with @tests/ aliases):
 ```typescript
-import { createCorruptedTarArchive, getRandomPort, validVersions } from '@tests/helpers';
+// Binary manager tests
+import { createCorruptedTarArchive, mockHttpsGet } from '@tests/helpers';
+
+// Operations tests
+import { getRandomPort, genName } from '@tests/helpers';
+
+// Integration tests
+import { withTimeout, setupSuiteTimeout } from '@tests/helpers';
+
+// Mixed usage in single file
+import {
+  createCorruptedTarArchive,
+  mockHttpsGet,
+  getRandomPort,
+  genName,
+  withTimeout,
+  validVersions,
+  invalidVersions
+} from '@tests/helpers';
+```
+
+### TypeScript Path Mapping
+Update `tsconfig.test.json`:
+```json
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@tests/*": ["tests/*"],
+      "@/*": ["src/*"]
+    }
+  }
+}
+```
+
+### ESLint Configuration
+Update `.eslintrc.js` to recognize new aliases:
+```javascript
+module.exports = {
+  // ... existing config
+  settings: {
+    'import/resolver': {
+      typescript: {
+        alwaysTryTypes: true,
+        project: './tsconfig.test.json'
+      }
+    }
+  }
+};
 ```
 
 ### Usage Pattern Shift
@@ -173,4 +229,3 @@ await cleanup();
 </xai:function_call/>
 </xai:function_call name="run_command">
 <parameter name="command">git add docs/test-blueprints/helpers-consolidation.md
-
