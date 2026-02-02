@@ -237,6 +237,7 @@ module.exports = {
     'wrap-regex': 'off',
     'yield-star-spacing': 'error',
     yoda: ['error', 'never'],
+    'max-lines': ['error', { max: 333, skipBlankLines: true, skipComments: true }],
   },
   parserOptions: {
     ecmaVersion: 2018,

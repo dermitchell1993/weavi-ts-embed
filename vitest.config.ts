@@ -1,7 +1,14 @@
 import { defineConfig } from 'vitest/config';
+import { resolve } from 'path';
 
 export default defineConfig({
   cacheDir: '.vitest-cache',
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, 'src'),
+      '@tests': resolve(__dirname, 'tests'),
+    },
+  },
   test: {
     environment: 'node',
     testTimeout: 60000,
