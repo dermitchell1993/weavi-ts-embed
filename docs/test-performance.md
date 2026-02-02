@@ -76,7 +76,7 @@ This document validates the test suite optimizations implemented across Phase 1 
 - ✅ Integration tests use correct timeout (120s shown in logs)
 
 **Evidence:**
-```
+```bash
 ✅ npm run test -- test/utils/timeoutGuard.test.ts
 19 passed (19) - 6.18s
 
