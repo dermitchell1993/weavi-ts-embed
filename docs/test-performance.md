@@ -27,6 +27,14 @@ This document validates the test suite optimizations implemented across Phase 1 
 
 ## Phase 3A: Fail-Fast Infrastructure (Timeout Guards)
 
+### Timeout Layers Overview
+
+| Layer | Duration | Purpose |
+|-------|----------|---------|
+| **Operation-Level** | 90s (local) / 120s (CI) | Wraps individual async operations |
+| **Suite-Level** | 3 minutes | Hard limit for entire test suite |
+| **CI-Level** | 4 minutes | GitHub Actions job timeout |
+
 ### Implementation
 
 **Three-Tier Timeout Protection:**
