@@ -10,9 +10,9 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { validateOptions, prepareConfig } from '../config';
-import type { EmbeddedOptionsConfig } from '../embedded';
-import type { Logger } from '../types';
+import { validateOptions, prepareConfig } from '../../../src/config';
+import type { EmbeddedOptionsConfig } from '../../../src/embedded';
+import type { Logger } from '../../../src/types';
 
 describe('Logger Integration', () => {
   describe('Custom Logger', () => {

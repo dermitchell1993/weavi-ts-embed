@@ -8,8 +8,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { applyDefaults, DEFAULT_CONFIG } from '../config';
-import type { EmbeddedOptionsConfig } from '../embedded';
+import { applyDefaults, DEFAULT_CONFIG } from '../../../src/config';
+import type { EmbeddedOptionsConfig } from '../../../src/embedded';
 
 describe('applyDefaults', () => {
   describe('default application', () => {

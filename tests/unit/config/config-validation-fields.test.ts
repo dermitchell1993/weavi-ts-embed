@@ -7,7 +7,7 @@
  */
 
 import { describe, it } from 'vitest';
-import type { EmbeddedOptionsConfig } from '../embedded';
+import type { EmbeddedOptionsConfig } from '../../../src/embedded';
 import { expectValidConfig, expectInvalidConfig } from './config-test-helpers';
 
 describe('validateOptions - Field-Specific Validation', () => {

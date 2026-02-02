@@ -1,7 +1,7 @@
 /* eslint-disable no-plusplus, require-await */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { waitForReady, checkHealth, checkLiveness } from './health-checker';
-import type { HealthCheckConfig } from './types';
+import { waitForReady, checkHealth, checkLiveness } from '../../../src/health-checker';
+import type { HealthCheckConfig } from '../../../src/types';
 
 // Mock global fetch
 global.fetch = vi.fn();

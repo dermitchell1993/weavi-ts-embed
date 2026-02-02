@@ -9,8 +9,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { prepareConfig, ConfigValidationError, DEFAULT_CONFIG } from '../config';
-import type { EmbeddedOptionsConfig } from '../embedded';
+import { prepareConfig, ConfigValidationError, DEFAULT_CONFIG } from '../../../src/config';
+import type { EmbeddedOptionsConfig } from '../../../src/embedded';
 
 describe('prepareConfig - Full Pipeline', () => {
   describe('defaults and validation', () => {

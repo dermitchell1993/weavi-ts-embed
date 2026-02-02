@@ -6,8 +6,8 @@
  */
 
 import { expect } from 'vitest';
-import { ConfigValidationError, validateOptions } from '../config';
-import type { EmbeddedOptionsConfig } from '../embedded';
+import { ConfigValidationError, validateOptions } from '../../../src/config';
+import type { EmbeddedOptionsConfig } from '../../../src/embedded';
 
 /**
  * Test data fixtures

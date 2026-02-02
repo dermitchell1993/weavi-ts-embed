@@ -8,8 +8,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { mergeConfig } from '../config';
-import type { EmbeddedOptionsConfig } from '../embedded';
+import { mergeConfig } from '../../../src/config';
+import type { EmbeddedOptionsConfig } from '../../../src/embedded';
 
 describe('mergeConfig', () => {
   describe('basic merging', () => {

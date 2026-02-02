@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { ConfigValidationError, DEFAULT_CONFIG } from '../config';
+import { ConfigValidationError, DEFAULT_CONFIG } from '../../../src/config';
 
 describe('ConfigValidationError', () => {
   describe('error properties', () => {

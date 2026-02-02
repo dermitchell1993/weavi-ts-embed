@@ -1,7 +1,7 @@
 import { homedir } from 'os';
 import { join } from 'path';
 import { describe, it, expect } from 'vitest';
-import { EmbeddedOptions } from './embedded';
+import { EmbeddedOptions } from '../../../src/embedded';
 
 describe('embedded', () => {
   it('creates EmbeddedOptions with defaults', () => {

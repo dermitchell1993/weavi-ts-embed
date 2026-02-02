@@ -13,7 +13,7 @@
 /* eslint-disable require-await */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { WeaviateProcess } from './process-manager';
+import { WeaviateProcess } from '../../../src/process-manager';
 import { spawn } from 'child_process';
 import { EventEmitter } from 'events';
 

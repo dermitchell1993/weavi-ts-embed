@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
-import { connectToEmbedded, EmbeddedClient } from './index';
+import { connectToEmbedded, EmbeddedClient } from '../../../src/index';
 
 describe('connectToEmbedded() factory function', () => {
   let client: EmbeddedClient;

@@ -5,7 +5,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     testTimeout: 60000,
-    setupFiles: ['test/setup/suiteTimeout.ts'],
+    setupFiles: ['tests/setup/suiteTimeout.ts'],
     // Run test files sequentially to prevent resource contention
     fileParallelism: 1,
     // Use threads for parallelization but limit for integration tests
@@ -20,7 +20,7 @@ export default defineConfig({
     },
     include: ['**/*.test.ts'],
     typecheck: {
-      tsconfig: './tsconfig-test.json',
+      tsconfig: './tests/tsconfig.test.json',
     },
     // Optimize for CI
     reporters: process.env.CI ? ['verbose'] : ['default'],
