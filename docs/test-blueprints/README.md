@@ -1,51 +1,92 @@
-# Phase 0 Research: Test Infrastructure Blueprints
+# 🔬 Test Infrastructure Research & Blueprints
 
 ## Overview
 
-This directory contains detailed blueprints extracted from the `test-museum` branch during Phase 0 research. Each blueprint documents the complete test structure, assertions, patterns, and requirements for a specific test category.
+This directory contains comprehensive research and blueprints for the clean rebuild of scattered test infrastructure. Phase 0 research examined museum files to extract test patterns, assertions, and requirements for intentional replication in focused, maintainable test files.
 
-## Blueprints Created
+## 📊 Research Foundation
 
-### 1. Binary Manager Unit Tests
-- **Source:** `tests/unit/binary-manager.test.ts` (876 lines)
-- **Test Cases:** 45+ individual test cases
-- **Categories:** Constructor, Version Resolution, URL Construction, Checksum, Caching, Edge Cases
+### Museum File Analysis
+- **Binary Manager**: 904 lines, 56 tests → 4 clean files (72% size reduction)
+- **Health Checker**: 812 lines, 44 tests → 3 clean files (67% size reduction)
+- **Process Manager**: 555 lines, 44 tests → 2 clean files (50% size reduction)
+- **Operations**: 316 lines, 14 tests → 2 clean files (50% size reduction)
+- **Total**: 2,587 lines, 158 tests → 11 focused files (≤275 lines each)
 
-### 2. Lifecycle Integration Tests
-- **Source:** `tests/integration/lifecycle.test.ts` (839 lines)
-- **Test Cases:** 16 comprehensive integration tests
-- **Categories:** Basic Lifecycle, Shutdown, Cycles, Error Handling, Health Polling
+### Test Pattern Extraction
+- Extracted exact test names and assertion patterns from each monster file
+- Categorized tests by functional domain and behavior
+- Mapped test patterns to intentional new file assignments
+- Documented all 158 original test scenarios for clean replication
 
-### 3. Archive Bombs Security Tests
-- **Source:** `tests/security/archiveBombs.test.ts` (654 lines)
-- **Test Cases:** 25+ security validation tests
-- **Categories:** Zip Bombs, Path Traversal, Permissions, Corruption
+## 📚 Documentation Structure
 
-### 4. Configuration Tests
-- **Source:** `src/__tests__/config-*.test.ts` (5 files)
-- **Categories:** Defaults, Validation, Merging, Pipeline, Logging
+### Strategic Planning
+- **[PHASE-0-OVERVIEW.md](PHASE-0-OVERVIEW.md)** - Executive summary and clean rebuild approach
+- **[IMPLEMENTATION-ROADMAP.md](IMPLEMENTATION-ROADMAP.md)** - 12-phase clean rebuild execution plan
+- **[SUCCESS-VALIDATION-CHECKLIST.md](SUCCESS-VALIDATION-CHECKLIST.md)** - Comprehensive validation framework
 
-## Research Statistics
+### Detailed Research Blueprints
+- **[DETAILED-TEST-BLUEPRINTS.md](DETAILED-TEST-BLUEPRINTS.md)** - Comprehensive test splitting blueprints with exact test names and assertions
+- **[binary-manager.md](binary-manager.md)** - Binary manager test patterns and requirements
+- **[operations.md](operations.md)** - Database operations test patterns
+- **[integration-tests.md](integration-tests.md)** - Integration test scenarios
+- **[security-performance.md](security-performance.md)** - Security and performance test patterns
 
-- **Total Test Files Examined:** 4 major categories
-- **Total Test Cases Documented:** 86+ individual test cases
-- **Total Lines Analyzed:** 2,369 lines of test code
-- **Helper Functions:** 25+ utilities identified
-- **Mocking Patterns:** 8 distinct strategies
-- **Assertion Patterns:** 15+ validation approaches
+### Supporting Research
+- **[test-case-inventory.md](test-case-inventory.md)** - Complete test case inventory
+- **[test-patterns-reference.md](test-patterns-reference.md)** - Test pattern reference guide
+- **[helpers-consolidation.md](helpers-consolidation.md)** - Helper function specifications
+- **[config-detailed-blueprint.md](config-detailed-blueprint.md)** - Configuration test blueprints
+- **[unit-tests-inventory.md](unit-tests-inventory.md)** - Unit test inventory
 
-## Next Steps
+## 🎯 Clean Rebuild Strategy
 
-These blueprints provide specifications for Phase 1-3 implementation:
-1. Create new directory structure and path aliases
-2. Implement helper functions based on extracted patterns
-3. Reconstruct tests using blueprints as specifications
+### Intentional Rebuild Approach
+1. **Pattern-Based Replication**: Use extracted test patterns to intentionally recreate tests
+2. **Clean State Implementation**: Build from develop baseline (no technical debt inheritance)
+3. **Functional Domain Separation**: Organize by behavior, not by original file structure
+4. **File Size Discipline**: All new files ≤275 lines (72% reduction from largest original)
 
-## Quality Assurance
+### Implementation Phases
+- **Phase 1**: Foundation Setup - Directory structure and path aliases
+- **Phase 2**: Infrastructure Creation - Clean helpers and fixtures
+- **Phase 3-6**: Test Replication - Recreate all 158 tests across 11 focused files
+- **Phase 7-12**: Integration & Validation - CI, performance, and go-live preparation
 
-- ✅ Complete test case inventory
+## 📈 Success Metrics
+
+- ✅ **Test Preservation**: All 158 original tests maintained
+- ✅ **Size Reduction**: 72% reduction in largest files (904 → ≤275 lines)
+- ✅ **Coverage Maintained**: ≥ baseline test coverage
+- ✅ **CI Performance**: Unchanged or improved execution time
+- ✅ **Developer Experience**: "Add test" time <30 seconds
+- ✅ **Architecture**: Clean separation by functional domain
+
+## 🚀 Next Steps
+
+### Immediate Actions
+1. **Review Blueprints**: Examine `DETAILED-TEST-BLUEPRINTS.md` for test mappings
+2. **Phase 1 Execution**: Create clean directory structure and aliases
+3. **Iterative Implementation**: Follow 12-phase roadmap
+
+### Long-term Goals
+- Zero test files in `src/` directory
+- Clear separation of concerns
+- Consistent `@tests/*` path aliases
+- No technical debt inheritance
+
+## ✨ Quality Assurance
+
+- ✅ Complete test case inventory (158 tests across 4 domains)
 - ✅ Assertion pattern documentation
 - ✅ Mocking strategy preservation
 - ✅ Helper function specifications
 - ✅ Edge case coverage
+- ✅ Security validation patterns
+- ✅ Performance benchmarking baselines
 
+---
+
+*Phase 0 Research: ✅ Complete*
+*Clean Rebuild: Implementation Ready*
