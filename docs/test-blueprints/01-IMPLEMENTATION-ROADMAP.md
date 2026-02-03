@@ -1,16 +1,16 @@
-# 🚀 Pragmatic Hybrid Implementation Roadmap
+# 🚀 Clean Rebuild Implementation Roadmap
 
 ## Overview
 
-**Approach**: Pragmatic Modularization - aggressive where necessary (monster files), conservative where sufficient (helpers).
+**Approach**: Clean rebuild - aggressive where necessary (monster files), conservative where sufficient (helpers).
 
-**Philosophy**: Build infrastructure first, slay monsters second, migrate systematically, enforce automatically.
+**Philosophy**: Build infrastructure first, slay monsters second, rebuild systematically, enforce automatically.
 
 **Total Duration**: ~23 hours across 12 phases
 
 **Key Principle**: Simple, reusable functions instead of elaborate DSL patterns.
 
-## 🎯 Why This Hybrid Plan Works
+## 🎯 Why This Plan Works
 
 | Aspect | Basic Consolidation | Full DSL Approach | **Hybrid (This Plan)** |
 |--------|---------------------|-------------------|------------------------|
@@ -32,7 +32,7 @@ Quick wins, establishes patterns, builds reusable infrastructure
 ### ⚔️ **MONSTER SLAYING** (Phases 4-5) — 6 hours  
 Tackle the biggest problems: binary-manager (904 lines) and operations (316 lines)
 
-### 🚚 **MIGRATION** (Phases 6-8) — 5 hours
+### 🚚 **REBUILD** (Phases 6-8) — 5 hours
 Apply established patterns to remaining tests
 
 ### 🛡️ **ENFORCEMENT** (Phase 9) — 1 hour
@@ -119,13 +119,14 @@ Configuration, cleanup, documentation
 - ✅ All fixtures accessible via `@tests/fixtures`
 - ✅ All setup utilities in `tests/setup/`
 - ✅ No scattered fixture files remain
+- ✅ No technical debt from original implementations
 - ✅ Imports updated and tests pass
 
 ---
 
 ### Phase 3: Helpers Consolidation (3 hours)
 
-**Objective**: Create 8 focused helper files with simple, reusable functions
+**Objective**: Create 8 focused helper files with clean architecture and simple, reusable functions
 
 **Target Structure** (~930 lines total):
 
@@ -259,7 +260,7 @@ export async function verifyConnection(client: EmbeddedClient): Promise<void> { 
 
 ### Phase 6: Unit Tests Migration (2 hours)
 
-**Objective**: Move remaining unit tests from `src/` to `tests/unit/`
+**Objective**: Rebuild remaining unit tests in `tests/unit/` (clean implementation, no file migration from test-museum)
 
 **Tasks**:
 1. **Identify scattered unit tests** in `src/`
@@ -518,7 +519,6 @@ Prevent regression with tooling:
 
 ---
 
-*Generated: Phase 0 Pragmatic Hybrid Planning*  
-*Approach: Infrastructure-first, monster-slaying, systematic migration*  
-*Philosophy: Simple functions, clear structure, automated enforcement*
-
+*Generated: Phase 0 Clean Rebuild Research*
+*Purpose: Intentional implementation roadmap for clean test infrastructure*
+*Philosophy: Simple functions, clear structure, automated enforcement, thwart technical debt*

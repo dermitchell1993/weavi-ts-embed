@@ -1,10 +1,10 @@
-# 🔬 Phase 0 Research: Test Infrastructure Analysis & Pragmatic Rebuild Planning
+# 🔬 Phase 0 Research: Test Infrastructure Analysis & Clean Rebuild Planning
 
 ## Overview
 
-This directory contains comprehensive Phase 0 research for intentionally rebuilding scattered test infrastructure into a clean, modular structure using a **Pragmatic Hybrid Modularization** approach.
+This directory contains comprehensive Phase 0 research for intentionally rebuilding scattered test infrastructure into a clean, modular structure.
 
-### 🎯 Hybrid Approach Philosophy
+### 🎯 Clean Rebuild Approach Philosophy
 
 **Aggressive where necessary** (monster files: 904, 316 lines)  
 **Conservative where sufficient** (helpers: 8 focused files)  
@@ -15,7 +15,7 @@ This directory contains comprehensive Phase 0 research for intentionally rebuild
 ### 📊 Museum Analysis (What Currently Exists)
 Detailed blueprints extracted from existing "museum" test files, documenting current test structures, assertions, patterns, and requirements.
 
-### 🏗️ Pragmatic Rebuild Plans (How to Rebuild)
+### 🏗️ Clean Rebuild Plans (How to Rebuild)
 Strategic planning and implementation blueprints for splitting large test files into clean, modular structures with infrastructure-first execution.
 
 ---
@@ -25,11 +25,15 @@ Strategic planning and implementation blueprints for splitting large test files 
 ### 🎯 Strategic Planning Documents
 
 **Core Strategy**:
-- **[00-PHASE-0-OVERVIEW.md](00-PHASE-0-OVERVIEW.md)** - High-level research summary and approach
-- **[01-IMPLEMENTATION-ROADMAP.md](01-IMPLEMENTATION-ROADMAP.md)** - **⭐ 12-phase pragmatic hybrid roadmap (~23h)**
+- **[00-PHASE-0-OVERVIEW.md](00-PHASE-0-OVERVIEW.md)** - High-level research summary and clean rebuild approach
+- **[01-IMPLEMENTATION-ROADMAP.md](01-IMPLEMENTATION-ROADMAP.md)** - **⭐ 12-phase clean rebuild execution plan (~23h)**
 - **[02-SUCCESS-VALIDATION-CHECKLIST.md](02-SUCCESS-VALIDATION-CHECKLIST.md)** - Comprehensive validation framework
 - **[03-TEST-REPLICATION-RULES.md](03-TEST-REPLICATION-RULES.md)** - Rules for replicating tests
 - **[04-REBUILD-SCHEMATICS.md](04-REBUILD-SCHEMATICS.md)** - Intentional file structure
+
+**Rebuild Plans**:
+- **[rebuild-binary-manager.md](rebuild-binary-manager.md)** - Split 904-line file into 4 clean files
+- **[rebuild-operations.md](rebuild-operations.md)** - Split 316-line file into 2 clean files
 
 ### 📋 Museum Analysis (Current Test Structure)
 
@@ -154,14 +158,6 @@ Strategic planning and implementation blueprints for splitting large test files 
 | Complexity | Low | High | **Medium** ✅ |
 | Risk | Medium | High | **Low** ✅ |
 
-### Key Advantages
-
-1. **Infrastructure First**: Build helpers and fixtures BEFORE splitting files
-2. **Simple Over Clever**: Reusable functions instead of elaborate DSL
-3. **Aggressive Where Needed**: Split monster files (904, 316 lines)
-4. **Conservative Where Sufficient**: Consolidate helpers pragmatically (8 files)
-5. **Automated Enforcement**: ESLint + pre-commit hooks + CI validation
-
 ---
 
 ## 📊 File Organization
@@ -243,8 +239,4 @@ await cleanup();
 
 ---
 
-*Generated: Phase 0 Pragmatic Hybrid Planning*  
-*Status: Ready for Implementation*  
-*Approach: Infrastructure-first, monster-slaying, systematic migration*  
-*Philosophy: Aggressive where necessary, conservative where sufficient, simple over clever*
-
+*Generated: Phase 0 Research Analysis*
