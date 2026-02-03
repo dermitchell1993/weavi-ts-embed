@@ -20,15 +20,15 @@ Strategic planning and implementation blueprints for splitting large test files 
 - **[04-REBUILD-SCHEMATICS.md](04-REBUILD-SCHEMATICS.md)** - Intentional file structure and replication paths
 
 ### Museum Analysis (Current Test Structure)
-- **[analysis-binary-manager.md](../analysis-binary-manager.md)** - Binary manager test patterns (56 tests, 904 lines)
-- **[analysis-operations.md](../analysis-operations.md)** - Operations test patterns (14 tests, 316 lines)
-- **[analysis-config-detailed.md](../analysis-config-detailed.md)** - Configuration test blueprints
-- **[analysis-helpers-consolidation.md](../analysis-helpers-consolidation.md)** - Helper function analysis
-- **[analysis-integration-tests.md](../analysis-integration-tests.md)** - Integration test patterns
-- **[analysis-security-performance.md](../analysis-security-performance.md)** - Security and performance tests
-- **[analysis-test-case-inventory.md](../analysis-test-case-inventory.md)** - Complete test case inventory
-- **[analysis-test-patterns-reference.md](../analysis-test-patterns-reference.md)** - Test pattern reference
-- **[analysis-unit-tests-inventory.md](../analysis-unit-tests-inventory.md)** - Unit test inventory
+- **[analysis-binary-manager.md](analysis-binary-manager.md)** - Binary manager test patterns (56 tests, 904 lines)
+- **[analysis-operations.md](analysis-operations.md)** - Operations test patterns (14 tests, 316 lines)
+- **[analysis-config-detailed.md](analysis-config-detailed.md)** - Configuration test blueprints
+- **[analysis-helpers-consolidation.md](analysis-helpers-consolidation.md)** - Helper function analysis
+- **[analysis-integration-tests.md](analysis-integration-tests.md)** - Integration test patterns
+- **[analysis-security-performance.md](analysis-security-performance.md)** - Security and performance tests
+- **[analysis-test-case-inventory.md](analysis-test-case-inventory.md)** - Complete test case inventory
+- **[analysis-test-patterns-reference.md](analysis-test-patterns-reference.md)** - Test pattern reference
+- **[analysis-unit-tests-inventory.md](analysis-unit-tests-inventory.md)** - Unit test inventory
 
 ### Clean Rebuild Plans (New Modular Structure)
 - **[rebuild-binary-manager.md](rebuild-binary-manager.md)** - Split 904-line file into 4 clean files (56 tests preserved)
