@@ -158,6 +158,14 @@ Strategic planning and implementation blueprints for splitting large test files 
 | Complexity | Low | High | **Medium** ✅ |
 | Risk | Medium | High | **Low** ✅ |
 
+### Key Advantages
+
+1. **Infrastructure First**: Build helpers and fixtures BEFORE splitting files
+2. **Simple Over Clever**: Reusable functions instead of elaborate DSL
+3. **Aggressive Where Needed**: Split monster files (904, 316 lines)
+4. **Conservative Where Sufficient**: Consolidate helpers pragmatically (8 files)
+5. **Automated Enforcement**: ESLint + pre-commit hooks + CI validation
+
 ---
 
 ## 📊 File Organization
