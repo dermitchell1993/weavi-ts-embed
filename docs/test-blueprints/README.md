@@ -1,24 +1,40 @@
-# 🔬 Test Infrastructure Clean Rebuild Research
+# 🔬 Phase 0 Research: Test Infrastructure Analysis & Clean Rebuild Planning
 
 ## Overview
-Pre-planning research for intentionally rebuilding scattered test infrastructure into clean, modular structure. This directory contains Phase 0 research: extracted test names, assertions, and patterns from museum files to enable clean replication in new files.
+
+This directory contains comprehensive Phase 0 research for intentionally rebuilding scattered test infrastructure into clean, modular structure. It combines two complementary documentation types:
+
+### 📊 Museum Analysis (What Currently Exists)
+Detailed blueprints extracted from existing "museum" test files, documenting current test structures, assertions, patterns, and requirements.
+
+### 🏗️ Clean Rebuild Plans (How to Rebuild)
+Strategic planning and implementation blueprints for splitting large test files into clean, modular structures.
 
 ## 📚 Documentation Structure
 
-### Strategic Planning
-- **[PHASE-0-OVERVIEW.md](PHASE-0-OVERVIEW.md)** - High-level research summary and clean rebuild approach
-- **[IMPLEMENTATION-ROADMAP.md](IMPLEMENTATION-ROADMAP.md)** - 12-phase clean rebuild execution plan
-- **[SUCCESS-VALIDATION-CHECKLIST.md](SUCCESS-VALIDATION-CHECKLIST.md)** - Comprehensive validation framework
+### Strategic Planning Documents
+- **[00-PHASE-0-OVERVIEW.md](00-PHASE-0-OVERVIEW.md)** - High-level research summary and clean rebuild approach
+- **[01-IMPLEMENTATION-ROADMAP.md](01-IMPLEMENTATION-ROADMAP.md)** - 12-phase clean rebuild execution plan
+- **[02-SUCCESS-VALIDATION-CHECKLIST.md](02-SUCCESS-VALIDATION-CHECKLIST.md)** - Comprehensive validation framework
+- **[03-TEST-REPLICATION-RULES.md](03-TEST-REPLICATION-RULES.md)** - Rules for replicating tests while preserving logic
+- **[04-REBUILD-SCHEMATICS.md](04-REBUILD-SCHEMATICS.md)** - Intentional file structure and replication paths
 
-### Detailed Research Blueprints
-- **[binary-manager-blueprints.md](binary-manager-blueprints.md)** - Extracted test patterns: 56 tests → 4 clean files
-- **[health-checker-blueprints.md](health-checker-blueprints.md)** - Extracted test patterns: 44 tests → 3 clean files
-- **[process-manager-blueprints.md](process-manager-blueprints.md)** - Extracted test patterns: 44 tests → 2 clean files
-- **[operations-blueprints.md](operations-blueprints.md)** - Extracted test patterns: 14 tests → 2 clean files
+### Museum Analysis (Current Test Structure)
+- **[analysis-binary-manager.md](../analysis-binary-manager.md)** - Binary manager test patterns (56 tests, 904 lines)
+- **[analysis-operations.md](../analysis-operations.md)** - Operations test patterns (14 tests, 316 lines)
+- **[analysis-config-detailed.md](../analysis-config-detailed.md)** - Configuration test blueprints
+- **[analysis-helpers-consolidation.md](../analysis-helpers-consolidation.md)** - Helper function analysis
+- **[analysis-integration-tests.md](../analysis-integration-tests.md)** - Integration test patterns
+- **[analysis-security-performance.md](../analysis-security-performance.md)** - Security and performance tests
+- **[analysis-test-case-inventory.md](../analysis-test-case-inventory.md)** - Complete test case inventory
+- **[analysis-test-patterns-reference.md](../analysis-test-patterns-reference.md)** - Test pattern reference
+- **[analysis-unit-tests-inventory.md](../analysis-unit-tests-inventory.md)** - Unit test inventory
 
-### Clean Rebuild Resources
-- **[REBUILD-SCHEMATICS.md](REBUILD-SCHEMATICS.md)** - Intentional file structure and replication paths
-- **[TEST-REPLICATION-RULES.md](TEST-REPLICATION-RULES.md)** - Rules for replicating tests while preserving logic
+### Clean Rebuild Plans (New Modular Structure)
+- **[rebuild-binary-manager.md](rebuild-binary-manager.md)** - Split 904-line file into 4 clean files (56 tests preserved)
+- **[rebuild-health-checker.md](rebuild-health-checker.md)** - Split 812-line file into 3 clean files (44 tests preserved)
+- **[rebuild-operations.md](rebuild-operations.md)** - Split 316-line file into 2 clean files (14 tests preserved)
+- **[rebuild-process-manager.md](rebuild-process-manager.md)** - Split 555-line file into 2 clean files (44 tests preserved)
 
 ## 🎯 Key Metrics
 
@@ -39,10 +55,11 @@ Pre-planning research for intentionally rebuilding scattered test infrastructure
 
 ## 📋 Quick Start
 
-1. **Review Strategic Overview**: Start with [PHASE-0-OVERVIEW.md](PHASE-0-OVERVIEW.md)
-2. **Understand Implementation**: Read [IMPLEMENTATION-ROADMAP.md](IMPLEMENTATION-ROADMAP.md)
-3. **Review Specific Blueprints**: Check individual monster file blueprints
-4. **Validate Success**: Use [SUCCESS-VALIDATION-CHECKLIST.md](SUCCESS-VALIDATION-CHECKLIST.md)
+1. **Review Strategic Overview**: Start with [00-PHASE-0-OVERVIEW.md](00-PHASE-0-OVERVIEW.md)
+2. **Understand Implementation**: Read [01-IMPLEMENTATION-ROADMAP.md](01-IMPLEMENTATION-ROADMAP.md)
+3. **Analyze Current Structure**: Check `analysis-*` files to understand what exists
+4. **Review Rebuild Plans**: Check `rebuild-*` files to see how to restructure
+5. **Validate Success**: Use [02-SUCCESS-VALIDATION-CHECKLIST.md](02-SUCCESS-VALIDATION-CHECKLIST.md)
 
 ## 🎯 Success Criteria
 
