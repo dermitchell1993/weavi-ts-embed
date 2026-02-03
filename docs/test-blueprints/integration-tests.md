@@ -218,5 +218,37 @@ describe('integration tests', () => {
 - **Parallel execution**: Tests can run in parallel but need different ports
 - **Resource usage**: Each test consumes CPU, memory, and disk space
 - **Timeout management**: Extended timeouts (90-120s) for binary operations
+
+## Lifecycle Integration Tests (16 comprehensive tests)
+**File**: tests/integration/lifecycle.test.ts (839 lines)
+
+### Test Categories:
+1. **Basic Lifecycle** (3 tests): Process startup, port conflicts, custom env vars
+2. **Graceful Shutdown (SIGTERM)** (3 tests): Stop operations, multiple calls, in-flight operations
+3. **SIGKILL Fallback** (2 tests): Force kill, already-terminated process
+4. **Multiple Start/Stop Cycles** (3 tests): 3-cycle test, rapid cycles, data persistence
+5. **Unexpected Termination & Cleanup** (3 tests): Crash detection, resource cleanup, zombie prevention
+6. **Error Handling & Edge Cases** (3 tests): Early stop, invalid PID, port conflict detection
+7. **Health Polling** (2 tests): Health endpoint polling, timeout behavior
+
+### Key Test Scenarios:
+- Process lifecycle management with random port allocation
+- Comprehensive cleanup and resource management
+- Health polling with timeout behavior
+- Multiple start/stop cycles with data persistence
+- Error handling for invalid PIDs and port conflicts
+- SIGTERM graceful shutdown vs SIGKILL fallback
+
+### Helper Functions: 8 process/port/health management utilities
+### Total Test Cases: 16 comprehensive integration tests
+### Key Patterns: Random port allocation, comprehensive cleanup, health polling
+
+### Test Examples:
+- `should start and stop process successfully`
+- `should handle multiple start/stop cycles`
+- `should perform graceful shutdown on SIGTERM`
+- `should fallback to SIGKILL when SIGTERM fails`
+- `should detect and cleanup crashed processes`
+- `should poll health endpoint with timeout`
 - **Binary caching**: Subsequent runs may be faster due to cached binaries
 - **Platform isolation**: Linux/macOS tests run on appropriate platforms only

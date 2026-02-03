@@ -35,6 +35,51 @@
 **Mock requirements:**
 - None (pure validation logic)
 
+### Archive Bomb Security Tests (25+ tests)
+**File**: tests/security/archiveBombs.test.ts (654 lines)
+
+**Security Test Categories:**
+1. **Excessive Nesting Detection** (5 tests): Zip bombs with extreme/moderate nesting, safe levels, boundary conditions
+2. **Compression Ratio Detection** (4 tests): Decompression bombs, ratio thresholds, boundary validation
+3. **Size Limits Protection** (2 tests): 1GB uncompressed limit, size validation
+4. **Path Traversal Protection** (3 tests): ../ sequences, absolute paths, Windows separators
+5. **Symlink Protection** (2 tests): Symlink detection, nested symlinks
+6. **Permission-based Attacks** (2 tests): Dangerous permissions, setuid/setgid
+7. **Long Path Handling** (1 test): Path length limits
+8. **Archive Corruption** (1 test): Corrupted file handling
+9. **Null Byte Attacks** (1 test): Null byte injection
+10. **Combined Attack Vectors** (1 test): Multi-vector attacks
+
+**Security Thresholds:**
+- MAX_NESTING_DEPTH: 100
+- MAX_COMPRESSION_RATIO: 100:1
+- MAX_UNCOMPRESSED_SIZE: 1GB
+
+**Test names examples:**
+- `should detect excessive nesting in zip bombs`
+- `should reject compression ratios above 100:1`
+- `should prevent path traversal in archive extraction`
+- `should detect dangerous file permissions`
+- `should handle corrupted archive files gracefully`
+
+**Security Scenarios:**
+- Zip bombs with 10,000+ nested directories
+- Archives with 1000:1 compression ratios
+- Path traversal: `../../../etc/passwd`
+- Symlink attacks: recursive symlink loops
+- Permission attacks: setuid/setgid files
+- Null byte injection in filenames
+
+**Assertions:**
+- `expect(() => extractArchive(bombArchive)).toThrow(/excessive nesting/)`
+- `expect(() => extractArchive(highRatioArchive)).toThrow(/compression ratio/)`
+- `expect(() => extractArchive(pathTraversalArchive)).toThrow(/path traversal/)`
+
+**Mock requirements:**
+- Archive creation utilities (11 helper functions)
+- File system mocking for extraction simulation
+- Permission mocking for security testing
+
 ### Input Validation Security (~3 tests)
 **Files**: binary-manager.test.ts
 
@@ -199,4 +244,3 @@ it('should lookup cache entries in O(1) time', () => {
 2. **Cache Operations**: Lookup, insertion, scaling performance
 3. **Batch Processing**: Multiple operation efficiency
 4. **Memory Usage**: Large dataset handling without leaks
-
