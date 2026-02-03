@@ -1,51 +1,76 @@
-# Phase 0 Research: Test Infrastructure Blueprints
+# 🔬 Phase 0 Research: Test Infrastructure Analysis & Clean Rebuild Planning
 
 ## Overview
 
-This directory contains detailed blueprints extracted from the `test-museum` branch during Phase 0 research. Each blueprint documents the complete test structure, assertions, patterns, and requirements for a specific test category.
+This directory contains comprehensive Phase 0 research for intentionally rebuilding scattered test infrastructure into clean, modular structure. It combines two complementary documentation types:
 
-## Blueprints Created
+### 📊 Museum Analysis (What Currently Exists)
+Detailed blueprints extracted from existing "museum" test files, documenting current test structures, assertions, patterns, and requirements.
 
-### 1. Binary Manager Unit Tests
-- **Source:** `tests/unit/binary-manager.test.ts` (876 lines)
-- **Test Cases:** 45+ individual test cases
-- **Categories:** Constructor, Version Resolution, URL Construction, Checksum, Caching, Edge Cases
+### 🏗️ Clean Rebuild Plans (How to Rebuild)
+Strategic planning and implementation blueprints for splitting large test files into clean, modular structures.
 
-### 2. Lifecycle Integration Tests
-- **Source:** `tests/integration/lifecycle.test.ts` (839 lines)
-- **Test Cases:** 16 comprehensive integration tests
-- **Categories:** Basic Lifecycle, Shutdown, Cycles, Error Handling, Health Polling
+## 📚 Documentation Structure
 
-### 3. Archive Bombs Security Tests
-- **Source:** `tests/security/archiveBombs.test.ts` (654 lines)
-- **Test Cases:** 25+ security validation tests
-- **Categories:** Zip Bombs, Path Traversal, Permissions, Corruption
+### Strategic Planning Documents
+- **[00-PHASE-0-OVERVIEW.md](00-PHASE-0-OVERVIEW.md)** - High-level research summary and clean rebuild approach
+- **[01-IMPLEMENTATION-ROADMAP.md](01-IMPLEMENTATION-ROADMAP.md)** - 12-phase clean rebuild execution plan
+- **[02-SUCCESS-VALIDATION-CHECKLIST.md](02-SUCCESS-VALIDATION-CHECKLIST.md)** - Comprehensive validation framework
+- **[03-TEST-REPLICATION-RULES.md](03-TEST-REPLICATION-RULES.md)** - Rules for replicating tests while preserving logic
+- **[04-REBUILD-SCHEMATICS.md](04-REBUILD-SCHEMATICS.md)** - Intentional file structure and replication paths
 
-### 4. Configuration Tests
-- **Source:** `src/__tests__/config-*.test.ts` (5 files)
-- **Categories:** Defaults, Validation, Merging, Pipeline, Logging
+### Museum Analysis (Current Test Structure)
+- **[analysis-binary-manager.md](analysis-binary-manager.md)** - Binary manager test patterns (56 tests, 904 lines)
+- **[analysis-operations.md](analysis-operations.md)** - Operations test patterns (14 tests, 316 lines)
+- **[analysis-config-detailed.md](analysis-config-detailed.md)** - Configuration test blueprints
+- **[analysis-helpers-consolidation.md](analysis-helpers-consolidation.md)** - Helper function analysis
+- **[analysis-integration-tests.md](analysis-integration-tests.md)** - Integration test patterns
+- **[analysis-security-performance.md](analysis-security-performance.md)** - Security and performance tests
+- **[analysis-test-case-inventory.md](analysis-test-case-inventory.md)** - Complete test case inventory
+- **[analysis-test-patterns-reference.md](analysis-test-patterns-reference.md)** - Test pattern reference
+- **[analysis-unit-tests-inventory.md](analysis-unit-tests-inventory.md)** - Unit test inventory
 
-## Research Statistics
+### Clean Rebuild Plans (New Modular Structure)
+- **[rebuild-binary-manager.md](rebuild-binary-manager.md)** - Split 904-line file into 4 clean files (56 tests preserved)
+- **[rebuild-health-checker.md](rebuild-health-checker.md)** - Split 812-line file into 3 clean files (44 tests preserved)
+- **[rebuild-operations.md](rebuild-operations.md)** - Split 316-line file into 2 clean files (14 tests preserved)
+- **[rebuild-process-manager.md](rebuild-process-manager.md)** - Split 555-line file into 2 clean files (44 tests preserved)
 
-- **Total Test Files Examined:** 4 major categories
-- **Total Test Cases Documented:** 86+ individual test cases
-- **Total Lines Analyzed:** 2,369 lines of test code
-- **Helper Functions:** 25+ utilities identified
-- **Mocking Patterns:** 8 distinct strategies
-- **Assertion Patterns:** 15+ validation approaches
+## 🎯 Key Metrics
 
-## Next Steps
+| Original File | Lines | New Files | Tests Preserved | Size Reduction |
+|---------------|-------|-----------|----------------|----------------|
+| `binary-manager.test.ts` | 904 | 4 files | 56 tests | 72% |
+| `health-checker.test.ts` | 812 | 3 files | 44 tests | 67% |
+| `process-manager.test.ts` | 555 | 2 files | 44 tests | 50% |
+| `operations.test.ts` | 316 | 2 files | 14 tests | 50% |
 
-These blueprints provide specifications for Phase 1-3 implementation:
-1. Create new directory structure and path aliases
-2. Implement helper functions based on extracted patterns
-3. Reconstruct tests using blueprints as specifications
+**Total:** 2,587 lines → 11 files (158 tests preserved)
 
-## Quality Assurance
+## 🚀 Implementation Status
 
-- ✅ Complete test case inventory
-- ✅ Assertion pattern documentation
-- ✅ Mocking strategy preservation
-- ✅ Helper function specifications
-- ✅ Edge case coverage
+- ✅ **Phase 0**: Research Complete
+- 🔄 **Phase 1**: Foundation Setup (Ready)
+- ⏳ **Phase 2-12**: Implementation (Planned)
 
+## 📋 Quick Start
+
+1. **Review Strategic Overview**: Start with [00-PHASE-0-OVERVIEW.md](00-PHASE-0-OVERVIEW.md)
+2. **Understand Implementation**: Read [01-IMPLEMENTATION-ROADMAP.md](01-IMPLEMENTATION-ROADMAP.md)
+3. **Analyze Current Structure**: Check `analysis-*` files to understand what exists
+4. **Review Rebuild Plans**: Check `rebuild-*` files to see how to restructure
+5. **Validate Success**: Use [02-SUCCESS-VALIDATION-CHECKLIST.md](02-SUCCESS-VALIDATION-CHECKLIST.md)
+
+## 🎯 Success Criteria
+
+- ✅ All files ≤333 lines (target: ≤250 avg)
+- ✅ Test coverage maintained (≥ baseline)
+- ✅ CI time unchanged or improved
+- ✅ Zero tests in `src/` directory
+- ✅ Clear separation by concern
+- ✅ Consistent path aliases (`@tests/*`)
+
+---
+
+*Generated: Phase 0 Research Analysis*
+*Status: Ready for Implementation*
