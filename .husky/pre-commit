@@ -2,3 +2,13 @@
 . "$(dirname "$0")/_/husky.sh"
 
 npx lint-staged
+
+# File size validation
+find tests/ src/ -name "*.ts" -not -path "*/node_modules/*" | while read file; do
+  lines=$(wc -l < "$file")
+  if [ $lines -gt 333 ]; then
+    echo "❌ $file: $lines lines (max 333)"
+    exit 1
+  fi
+done
+echo "✅ All files within 333-line limit"
