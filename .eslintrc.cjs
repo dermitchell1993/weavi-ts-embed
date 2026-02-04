@@ -59,7 +59,11 @@ module.exports = {
     'lines-around-directive': 'error',
     'max-depth': 'error',
     'max-len': 'off',
-    'max-lines': 'off',
+    'max-lines': ['error', {
+      max: 333,
+      skipBlankLines: true,
+      skipComments: true
+    }],
     'max-nested-callbacks': 'error',
     'max-params': 'off',
     'max-statements': 'off',
